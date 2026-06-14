@@ -1,0 +1,3431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>King — NoFap Journey Tracker</title>
+
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="./manifest.json">
+    <meta name="theme-color" content="#34c759">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="King">
+    <link rel="apple-touch-icon" href="./icon-192.png">
+    <style>
+        /* ── RESET & TOKENS ─────────────────────────────── */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --green:       #34c759;
+            --green-light: #30d158;
+            --gold:        #ff9f0a;
+            --text:        #1d1d1f;
+            --text-muted:  #86868b;
+            --border:      #d2d2d7;
+            --card:        #ffffff;
+            --bg:          #f5f5f7;
+        }
+
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            padding: 20px;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .container { max-width: 480px; margin: 0 auto; padding: 12px 14px 24px; }
+
+        /* ── CARDS ──────────────────────────────────────── */
+        .card {
+            background: var(--card);
+            border-radius: 18px;
+            padding: 16px;
+            margin-bottom: 12px;
+            box-shadow: 0 2px 16px rgba(0,0,0,0.08);
+            animation: fadeUp 0.4s ease both;
+        }
+
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ── LIFETIME STATS ── */
+        .lifetime-stats {
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+            padding: 8px 0 4px;
+        }
+
+        .lifetime-stat {
+            flex: 1;
+            text-align: center;
+        }
+
+        .lifetime-stat-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--text);
+            letter-spacing: -0.5px;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .lifetime-stat-value.green { color: var(--green); }
+        .lifetime-stat-value.red   { color: #ff453a; }
+
+        .lifetime-stat-label {
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .lifetime-stat-divider {
+            width: 1px;
+            height: 40px;
+            background: var(--border);
+        }
+
+        /* ── KNOWLEDGE CARD ── */
+        .knowledge-card.card {
+            padding: 16px 18px;
+        }
+
+        .knowledge-emoji {
+            font-size: 24px;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        .knowledge-content { flex: 1; }
+
+        .knowledge-headline {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 5px;
+            line-height: 1.4;
+        }
+
+        .knowledge-body {
+            font-size: 13px;
+            font-weight: 400;
+            color: var(--text-muted);
+            line-height: 1.55;
+        }
+
+        /* ── TOP ROW: Day + Best Journey ────────────────── */
+        .top-row {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        /* Small stat box (Day counter, Best Journey) */
+        .stat-box {
+            padding: 16px 20px;
+            border-radius: 14px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+
+        .stat-box.green {
+            background: rgba(52,199,89,0.12);
+            border: 1.5px solid rgba(52,199,89,0.3);
+            min-width: 80px;
+        }
+
+        .stat-box.gold {
+            background: rgba(255,159,10,0.12);
+            border: 1.5px solid rgba(255,159,10,0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Ghost trophy behind Best Journey card */
+        .stat-box.gold::before {
+            content: '🏆';
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 48px;
+            opacity: 0.15;
+        }
+
+        .stat-label {
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+
+        .stat-label.green { color: var(--green); }
+        .stat-label.gold  { color: var(--gold); }
+
+        .stat-value {
+            font-weight: 700;
+            line-height: 1;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .stat-value.green { font-size: 22px; color: var(--green); }
+        .stat-value.gold  { font-size: 26px; color: var(--gold); }
+
+        /* ── CURRENT JOURNEY SCORE ──────────────────────── */
+        .score-card {
+            background: rgba(52,199,89,0.18);
+            border: 2px solid rgba(52,199,89,0.4);
+            border-radius: 14px;
+            padding: 14px;
+            text-align: center;
+            margin-bottom: 14px;
+        }
+
+        .score-label {
+            font-size: 13px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            color: var(--green);
+            margin-bottom: 4px;
+        }
+
+        .score-value {
+            font-size: 38px;
+            font-weight: 700;
+            color: var(--green);
+            font-variant-numeric: tabular-nums;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50%       { opacity: 0.85; }
+        }
+
+        /* ── CHANCES (10 💪 emojis) ─────────────────────── */
+        .chances-card {
+            background: rgba(52,199,89,0.12);
+            border: 1.5px solid rgba(52,199,89,0.3);
+            border-radius: 14px;
+            padding: 12px 14px;
+            margin-bottom: 14px;
+        }
+
+        .chances-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 6px;
+            margin-bottom: 10px;
+        }
+
+        .chance {
+            font-size: 24px;
+            text-align: center;
+        }
+
+        /* Used chances go grey */
+        .chance.used {
+            filter: grayscale(100%) brightness(0.6) opacity(0.5);
+        }
+
+        .chances-label {
+            text-align: center;
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--green);
+        }
+
+        /* ── ACTION BUTTONS ─────────────────────────────── */
+        .action-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        button {
+            padding: 12px 16px;
+            border: none;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: inherit;
+            letter-spacing: -0.2px;
+            position: relative;
+        }
+
+        .btn-success {
+            background: linear-gradient(180deg, var(--green-light), var(--green));
+            color: white;
+            box-shadow: 0 4px 12px rgba(52,199,89,0.4);
+        }
+
+        .btn-success:hover:not(:disabled) { transform: translateY(-2px); }
+        .btn-success:active:not(:disabled) { transform: translateY(0); }
+
+        .btn-success:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            background: linear-gradient(180deg, #9ca3af, #6b7280);
+            box-shadow: none;
+        }
+
+        /* Darker green when already logged */
+        .btn-success.logged {
+            background: linear-gradient(180deg, #2d9c47, #1e7a34);
+            opacity: 1;
+        }
+
+        .btn-danger {
+            background: linear-gradient(180deg, #ff453a, #ff3b30);
+            color: white;
+            box-shadow: 0 4px 12px rgba(255,59,48,0.4);
+        }
+
+        .btn-danger:hover:not(:disabled) { transform: translateY(-2px); }
+        .btn-danger:active:not(:disabled) { transform: translateY(0); }
+
+        .btn-danger:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            background: linear-gradient(180deg, #9ca3af, #6b7280);
+            box-shadow: none;
+        }
+
+        .btn-test {
+            grid-column: 1 / -1;
+            background: transparent;
+            color: var(--text-muted);
+            border: 1px dashed var(--border);
+            font-size: 13px;
+            padding: 10px;
+            border-radius: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            font-family: inherit;
+            box-shadow: none;
+            opacity: 0.6;
+        }
+
+        .btn-reset {
+            grid-column: 1 / -1;
+            background: transparent;
+            color: var(--text-muted);
+            border: 1px solid var(--border);
+            font-size: 13px;
+            padding: 10px;
+            border-radius: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            font-family: inherit;
+            box-shadow: none;
+            transition: all 0.2s;
+        }
+
+        .btn-reset:hover {
+            border-color: #ff3b30;
+            color: #ff3b30;
+        }
+
+        /* ── TABS (iOS segmented control) ───────────────── */
+        .tabs {
+            display: flex;
+            gap: 3px;
+            padding: 4px;
+            background: rgba(0,0,0,0.06);
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 11px 12px;
+            background: transparent;
+            border: none;
+            border-radius: 9px;
+            color: var(--text-muted);
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: inherit;
+        }
+
+        .tab.active {
+            background: var(--green);
+            color: white;
+            font-weight: 600;
+        }
+
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* ── MILESTONE CARDS ────────────────────────────── */
+        .milestone-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .milestone-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 16px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            transition: all 0.2s ease;
+        }
+
+        .milestone-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .milestone-icon { font-size: 20px; }
+
+        .milestone-name {
+            font-size: 15px;
+            color: var(--text);
+            font-weight: 500;
+        }
+
+        .milestone-status {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+
+        /* Past milestone: green text, no background change */
+        .milestone-item.achieved .milestone-name,
+        .milestone-item.achieved .milestone-status {
+            color: var(--green);
+            font-weight: 600;
+        }
+
+        /* Active milestone within current streak: green glow */
+        @keyframes glowGreen {
+            0%, 100% { box-shadow: none; background: rgba(52,199,89,0.08); }
+            50%       { box-shadow: 0 2px 8px -2px rgba(52,199,89,0.35); background: rgba(52,199,89,0.14); }
+        }
+
+        @keyframes glowGold {
+            0%, 100% { box-shadow: none; background: rgba(255,159,10,0.08); }
+            50%       { box-shadow: 0 2px 8px -2px rgba(255,159,10,0.40); background: rgba(255,159,10,0.16); }
+        }
+
+        .milestone-item.achieved-glow {
+            border-color: rgba(52,199,89,0.45);
+            animation: glowGreen 2.4s ease-in-out infinite;
+        }
+
+        .milestone-item.achieved-glow .milestone-name,
+        .milestone-item.achieved-glow .milestone-status {
+            color: var(--green);
+            font-weight: 700;
+        }
+
+        /* Best streak: gold glow */
+        .milestone-item.golden {
+            background: rgba(255,159,10,0.10);
+            border-color: rgba(255,159,10,0.4);
+            animation: glowGold 2.4s ease-in-out infinite;
+        }
+
+        .milestone-item.golden .milestone-name,
+        .milestone-item.golden .milestone-status {
+            color: var(--gold);
+            font-weight: 700;
+        }
+
+        /* Section label above a group of milestones */
+        .section-label {
+            font-size: 13px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+            margin: 24px 0 12px 4px;
+        }
+
+        .section-label:first-child { margin-top: 0; }
+
+        /* ── STREAK CHART ───────────────────────────────── */
+        .chart-header {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            margin-bottom: 14px;
+        }
+
+        .chart-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .chart-subtitle {
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-muted);
+        }
+
+        .chart-outer {
+            display: flex;
+            align-items: stretch;
+        }
+
+        .chart-yaxis { flex-shrink: 0; width: 36px; height: 180px; }
+        .chart-inner { display: block; width: 100%; height: 180px; }
+
+        /* ── SCIENCE TAB ── */
+        .science-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .science-item {
+            border-radius: 14px;
+            padding: 14px 16px;
+            border: 1.5px solid var(--border);
+            background: var(--bg);
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        /* Current phase — glowing green */
+        .science-item.current {
+            border-color: rgba(52,199,89,0.5);
+            background: rgba(52,199,89,0.07);
+            animation: glowGreen 2.4s ease-in-out infinite;
+        }
+
+        /* Completed phase — green highlight like streak/journey milestones */
+        .science-item.completed {
+            border-color: rgba(52,199,89,0.35);
+            background: rgba(52,199,89,0.05);
+        }
+
+        .science-item.completed .science-phase-name {
+            color: var(--green);
+            font-weight: 700;
+        }
+
+        .science-item.completed .science-days-range {
+            color: var(--green);
+            border-color: rgba(52,199,89,0.3);
+            background: rgba(52,199,89,0.08);
+        }
+
+        /* Future phase — faded */
+        .science-item.future {
+            opacity: 0.4;
+        }
+
+        .science-item-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 6px;
+        }
+
+        .science-item-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .science-emoji { font-size: 20px; }
+
+        .science-phase-name {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .science-days-range {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-muted);
+            background: var(--bg);
+            padding: 3px 8px;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+        }
+
+        /* "YOU ARE HERE" badge on current phase */
+        .science-here-badge {
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.8px;
+            text-transform: uppercase;
+            color: var(--green);
+            background: rgba(52,199,89,0.12);
+            padding: 3px 8px;
+            border-radius: 20px;
+            border: 1px solid rgba(52,199,89,0.3);
+        }
+
+        .science-desc {
+            font-size: 13px;
+            color: var(--text-muted);
+            line-height: 1.55;
+        }
+
+        /* Progress bar inside current phase */
+        .science-progress-track {
+            height: 4px;
+            background: rgba(0,0,0,0.06);
+            border-radius: 99px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+
+        .science-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--green-light), var(--green));
+            border-radius: 99px;
+        }
+
+        .science-progress-label {
+            font-size: 11px;
+            color: var(--green);
+            font-weight: 600;
+            margin-top: 5px;
+        }
+
+        .science-disclaimer {
+            margin-top: 14px;
+            font-size: 11px;
+            color: var(--text-muted);
+            line-height: 1.6;
+            padding: 10px 12px;
+            background: rgba(0,0,0,0.03);
+            border-radius: 10px;
+            border: 1px solid var(--border);
+        }
+
+        .science-collapsed { cursor: pointer; }
+        .science-collapsed:hover { background: rgba(0,0,0,0.02); }
+
+        .science-chevron {
+            font-size: 16px;
+            color: var(--text-muted);
+            font-weight: 300;
+            line-height: 1;
+            display: inline-block;
+        }
+
+        /* ── BRAIN RECOVERY CARD ── */
+        .brain-header {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 12px;
+        }
+
+        .brain-icon {
+            font-size: 36px;
+            flex-shrink: 0;
+        }
+
+        .brain-phase {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text);
+            letter-spacing: -0.3px;
+        }
+
+        .brain-days {
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--green);
+            margin-top: 2px;
+        }
+
+        .brain-desc {
+            font-size: 14px;
+            color: var(--text-muted);
+            line-height: 1.6;
+            margin-bottom: 16px;
+        }
+
+        .brain-progress-track {
+            height: 6px;
+            background: rgba(0,0,0,0.06);
+            border-radius: 99px;
+            overflow: hidden;
+            margin-bottom: 8px;
+        }
+
+        .brain-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--green-light), var(--green));
+            border-radius: 99px;
+            transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .brain-next {
+            font-size: 12px;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        /* ── MONTHLY GRID ── */
+        .month-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 3px;
+            margin-bottom: 12px;
+        }
+
+        .month-cell {
+            aspect-ratio: 1;
+            border-radius: 4px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text-muted);
+            transition: all 0.2s;
+        }
+
+        .month-cell.strong {
+            background: var(--green);
+            border-color: var(--green);
+            color: white;
+        }
+
+        .month-cell.slip {
+            background: rgba(255,59,48,0.15);
+            border-color: rgba(255,59,48,0.3);
+            color: #ff3b30;
+        }
+
+        .month-cell.future {
+            opacity: 0.25;
+        }
+
+        .month-cell.today {
+            border-color: var(--green);
+            border-width: 2px;
+        }
+
+        .month-day-label {
+            font-size: 9px;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-align: center;
+            padding-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        .month-legend {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 11px;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .legend-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 2px;
+            display: inline-block;
+        }
+
+        .legend-dot.strong { background: var(--green); }
+        .legend-dot.slip   { background: rgba(255,59,48,0.5); }
+        .legend-dot.empty  { background: var(--bg); border: 1px solid var(--border); }
+
+        /* ── PROGRESSIVE REVEAL — LOCKED SECTIONS ── */
+        .next-unlock {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 14px 16px;
+            background: var(--bg);
+            border: 1.5px dashed var(--border);
+            border-radius: 12px;
+            margin-bottom: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+
+        .next-unlock-icon { font-size: 16px; }
+
+        /* Full mystery lock — no text, no silhouettes */
+        .mystery-lock {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 28px 16px;
+            background: var(--bg);
+            border: 1.5px dashed var(--border);
+            border-radius: 14px;
+            gap: 8px;
+        }
+
+        .mystery-lock-icon { font-size: 28px; }
+
+        /* ── CHART TOGGLE ── */
+        .chart-toggle {
+            display: flex;
+            gap: 2px;
+            padding: 3px;
+            background: rgba(0,0,0,0.06);
+            border-radius: 9px;
+            margin-bottom: 16px;
+            width: fit-content;
+        }
+
+        .chart-toggle-btn {
+            padding: 6px 18px;
+            border: none;
+            border-radius: 7px;
+            background: transparent;
+            color: var(--text-muted);
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            font-family: inherit;
+            transition: all 0.2s ease;
+            box-shadow: none;
+        }
+
+        .chart-toggle-btn.active {
+            background: var(--green);
+            color: white;
+            font-weight: 600;
+        }
+
+        /* ── CONFIRMATION MODAL ─────────────────────────── */
+        .modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .modal.active { display: flex; }
+
+        .modal-card {
+            background: var(--card);
+            padding: 28px;
+            border-radius: 20px;
+            max-width: 340px;
+            width: 100%;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            animation: popIn 0.3s ease;
+        }
+
+        @keyframes popIn {
+            from { opacity: 0; transform: scale(0.9) translateY(20px); }
+            to   { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        .modal-card h3 {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 24px;
+            color: var(--text);
+        }
+
+        .modal-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .modal-btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: inherit;
+            transition: transform 0.1s;
+        }
+
+        .modal-btn:hover  { transform: scale(1.02); }
+        .modal-btn:active { transform: scale(0.98); }
+        .modal-btn.confirm { background: var(--green); color: white; }
+        .modal-btn.cancel  { background: var(--bg); color: var(--text); border: 1px solid var(--border); }
+
+        /* ── CELEBRATION POPUP ──────────────────────────── */
+        .celebration-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(6px);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.35s ease;
+        }
+
+        .celebration-overlay.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .celebration-card {
+            background: var(--card);
+            border-radius: 28px;
+            padding: 36px 28px 28px;
+            max-width: 340px;
+            width: calc(100% - 40px);
+            text-align: center;
+            transform: scale(0.8) translateY(30px);
+            transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            box-shadow: 0 24px 60px rgba(0,0,0,0.25);
+        }
+
+        .celebration-overlay.active .celebration-card {
+            transform: scale(1) translateY(0);
+        }
+
+        .celebration-emoji {
+            font-size: 64px;
+            display: block;
+            margin-bottom: 14px;
+            animation: celebBounce 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 0.3s both;
+        }
+
+        @keyframes celebBounce {
+            from { transform: scale(0) rotate(-15deg); opacity: 0; }
+            to   { transform: scale(1) rotate(0deg);  opacity: 1; }
+        }
+
+        .celebration-stage {
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            color: var(--gold);
+            margin-bottom: 6px;
+        }
+
+        .celebration-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 8px;
+        }
+
+        .celebration-message {
+            font-size: 15px;
+            color: var(--text-muted);
+            line-height: 1.5;
+            margin-bottom: 24px;
+        }
+
+        .celebration-close {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(180deg, var(--green-light), var(--green));
+            color: white;
+            border: none;
+            border-radius: 14px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            font-family: inherit;
+            box-shadow: 0 4px 14px rgba(52,199,89,0.45);
+        }
+
+        /* ── TOAST ──────────────────────────────────────── */
+        #toast {
+            position: fixed;
+            bottom: 32px;
+            left: 50%;
+            transform: translateX(-50%) translateY(20px);
+            background: var(--green);
+            color: white;
+            padding: 13px 20px;
+            border-radius: 16px;
+            font-size: 14px;
+            font-weight: 600;
+            line-height: 1.4;
+            max-width: 300px;
+            width: max-content;
+            text-align: center;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 1100;
+            box-shadow: 0 8px 24px rgba(52,199,89,0.4);
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+
+        #toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        /* ── URGE BUTTON ── */
+        .btn-urge {
+            grid-column: 1 / -1;
+            background: #007aff;
+            color: white;
+            border: none;
+            font-size: 15px;
+            font-weight: 600;
+            padding: 13px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-family: inherit;
+            transition: all 0.2s;
+            box-shadow: 0 4px 12px rgba(0,122,255,0.35);
+        }
+        .btn-urge:hover { background: #0066d6; }
+
+        /* ── GENERIC OVERLAY (shared by urge, journal, compare) ── */
+        .overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            z-index: 2000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+        .overlay.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+        .overlay-card {
+            background: var(--card);
+            border-radius: 28px;
+            padding: 32px 24px 24px;
+            max-width: 360px;
+            width: 100%;
+            text-align: center;
+            box-shadow: 0 24px 60px rgba(0,0,0,0.3);
+            transform: scale(0.9) translateY(20px);
+            transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .overlay.active .overlay-card {
+            transform: scale(1) translateY(0);
+        }
+
+        /* ── URGE TIMER ── */
+        .urge-title {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 8px;
+            letter-spacing: -0.4px;
+        }
+        .urge-subtitle {
+            font-size: 14px;
+            color: var(--text-muted);
+            line-height: 1.5;
+            margin-bottom: 24px;
+        }
+        .breathing-ring-wrap {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 16px;
+        }
+        .breathing-ring { width: 140px; height: 140px; }
+        .urge-phase {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--green);
+            margin-bottom: 24px;
+            min-height: 20px;
+        }
+        .btn-urge-survived {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(180deg, var(--green-light), var(--green));
+            color: white;
+            border: none;
+            border-radius: 14px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            font-family: inherit;
+            margin-bottom: 10px;
+            box-shadow: 0 4px 14px rgba(52,199,89,0.4);
+        }
+        .btn-urge-cancel {
+            width: 100%;
+            padding: 12px;
+            background: transparent;
+            color: var(--text-muted);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            font-family: inherit;
+            box-shadow: none;
+        }
+
+        /* ── JOURNEY COMPARISON ── */
+        .compare-card { padding: 28px 20px 20px; }
+        .compare-header { margin-bottom: 20px; }
+        .compare-badge {
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            color: var(--gold);
+            margin-bottom: 6px;
+        }
+        .compare-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text);
+            letter-spacing: -0.3px;
+        }
+        .compare-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .compare-stat {
+            background: var(--bg);
+            border-radius: 14px;
+            padding: 14px 10px;
+            text-align: center;
+        }
+        .compare-stat-label {
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+        .compare-stat-values {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            font-size: 16px;
+            font-weight: 700;
+        }
+        .compare-val-old { color: var(--text-muted); font-size: 14px; }
+        .compare-arrow   { color: var(--text-muted); font-size: 12px; }
+        .compare-val-new { color: var(--green); }
+        .compare-val-new.worse  { color: #ff3b30; }
+        .compare-val-new.same   { color: var(--text-muted); }
+        .compare-message {
+            font-size: 14px;
+            line-height: 1.6;
+            color: var(--text-muted);
+            margin-bottom: 20px;
+            padding: 14px;
+            background: var(--bg);
+            border-radius: 12px;
+        }
+        .btn-compare-close {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(180deg, var(--green-light), var(--green));
+            color: white;
+            border: none;
+            border-radius: 14px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            font-family: inherit;
+            box-shadow: 0 4px 14px rgba(52,199,89,0.4);
+        }
+
+        /* ── ONBOARDING ─────────────────────────────────── */
+        .onboarding-overlay {
+            position: fixed;
+            inset: 0;
+            background: var(--bg);
+            z-index: 3000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            transition: opacity 0.4s ease;
+        }
+
+        .onboarding-overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .onboarding-card {
+            max-width: 360px;
+            width: 100%;
+            text-align: center;
+        }
+
+        .onboarding-slide {
+            display: none;
+            animation: fadeUp 0.35s ease both;
+        }
+
+        .onboarding-slide.active { display: block; }
+
+        .onboarding-emoji {
+            font-size: 72px;
+            margin-bottom: 28px;
+            display: block;
+        }
+
+        .onboarding-title {
+            font-size: 26px;
+            font-weight: 700;
+            color: var(--text);
+            letter-spacing: -0.5px;
+            margin-bottom: 14px;
+        }
+
+        .onboarding-body {
+            font-size: 16px;
+            color: var(--text-muted);
+            line-height: 1.6;
+            margin-bottom: 40px;
+            padding: 0 8px;
+        }
+
+        .onboarding-dots {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 28px;
+        }
+
+        .onboarding-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--border);
+            transition: all 0.3s ease;
+        }
+
+        .onboarding-dot.active {
+            background: var(--green);
+            width: 24px;
+            border-radius: 4px;
+        }
+
+        .onboarding-next {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(180deg, var(--green-light), var(--green));
+            color: white;
+            border: none;
+            border-radius: 14px;
+            font-size: 17px;
+            font-weight: 700;
+            cursor: pointer;
+            font-family: inherit;
+            letter-spacing: -0.3px;
+            box-shadow: 0 4px 16px rgba(52,199,89,0.4);
+            margin-bottom: 12px;
+            transition: transform 0.15s ease;
+        }
+
+        .onboarding-next:active { transform: scale(0.98); }
+
+        .onboarding-skip {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            font-family: inherit;
+            padding: 8px;
+            box-shadow: none;
+        }
+
+        /* ── CONFETTI CANVAS ── */
+        #confettiCanvas {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 999;
+        }
+    </style>
+</head>
+<body>
+
+<!-- Loading screen -->
+<div id="loadScreen" style="
+    position:fixed;inset:0;
+    background:linear-gradient(180deg, #30d158, #34c759);
+    display:flex;flex-direction:column;
+    align-items:center;justify-content:center;
+    z-index:9999;
+    transition:opacity 0.3s ease;
+    padding:40px;
+    text-align:center;
+">
+    <div style="font-size:32px;margin-bottom:12px;">💪</div>
+    <div style="font-size:28px;font-weight:800;color:white;letter-spacing:-0.5px;margin-bottom:20px;">King</div>
+    <div style="font-size:15px;font-weight:500;color:rgba(255,255,255,0.85);line-height:1.5;letter-spacing:-0.2px;">
+        "What gets measured,<br>gets managed."
+    </div>
+</div>
+
+<div class="container">
+
+    <!-- ═══ PRIMARY CARD ═══════════════════════════════════ -->
+    <div class="card">
+
+        <!-- Day counter + Best Journey -->
+        <div class="top-row">
+            <div class="stat-box green">
+                <div class="stat-label green">Day</div>
+                <div class="stat-value green" id="calendarDay">1</div>
+            </div>
+            <div class="stat-box gold">
+                <div class="stat-label gold">🏆 Best Journey</div>
+                <div class="stat-value gold" id="bestJourney">0/0</div>
+            </div>
+        </div>
+
+        <!-- Current journey score -->
+        <div class="score-card">
+            <div class="score-label">Current Journey</div>
+            <div class="score-value" id="currentJourney">0/0</div>
+        </div>
+
+        <!-- 10 chances (💪 emojis) -->
+        <div class="chances-card">
+            <div class="chances-grid" id="chancesGrid"></div>
+            <div class="chances-label" id="chancesLabel">💪 10 chances remaining</div>
+        </div>
+
+        <!-- Action buttons -->
+        <div class="action-buttons">
+            <button class="btn-success" id="successBtn" onclick="handleSuccess()">✓ I STAYED STRONG</button>
+            <button class="btn-danger"  id="failBtn"    onclick="showModal('fail')">✕ I Slipped</button>
+            <button class="btn-urge" onclick="startUrgeSurf()">🌊 I Feel the Urge</button>
+            <button class="btn-test" onclick="testNextDay()">next day (test)</button>
+        </div>
+    </div>
+
+    <!-- ═══ MILESTONES CARD ════════════════════════════════ -->
+    <div class="card">
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab(0)">Streak</button>
+            <button class="tab"        onclick="switchTab(1)">Journey</button>
+            <button class="tab"        onclick="switchTab(2)">Progress</button>
+        </div>
+
+        <!-- Tab 0: Streak milestones within current streak -->
+        <div class="tab-content active" id="tab-streak">
+            <div class="milestone-list">
+                <div class="milestone-item" id="cs-day1">
+                    <div class="milestone-info"><div class="milestone-icon">⚡</div><div class="milestone-name">Day 1</div></div>
+                    <div class="milestone-status">—</div>
+                </div>
+                <div class="milestone-item" id="cs-day3">
+                    <div class="milestone-info"><div class="milestone-icon">🔥</div><div class="milestone-name">Day 3</div></div>
+                    <div class="milestone-status">—</div>
+                </div>
+                <div class="milestone-item" id="cs-week1">
+                    <div class="milestone-info"><div class="milestone-icon">📅</div><div class="milestone-name">Week 1</div></div>
+                    <div class="milestone-status">—</div>
+                </div>
+                <div class="milestone-item" id="cs-day10">
+                    <div class="milestone-info"><div class="milestone-icon">🌟</div><div class="milestone-name">Day 10</div></div>
+                    <div class="milestone-status">—</div>
+                </div>
+                <div class="milestone-item" id="cs-week2">
+                    <div class="milestone-info"><div class="milestone-icon">🌿</div><div class="milestone-name">Week 2</div></div>
+                    <div class="milestone-status">—</div>
+                </div>
+                <div class="milestone-item" id="cs-week3">
+                    <div class="milestone-info"><div class="milestone-icon">🌱</div><div class="milestone-name">Week 3</div></div>
+                    <div class="milestone-status">—</div>
+                </div>
+                <div class="milestone-item" id="cs-day30">
+                    <div class="milestone-info"><div class="milestone-icon">💪</div><div class="milestone-name">Day 30</div></div>
+                    <div class="milestone-status">—</div>
+                </div>
+            </div>
+            <div class="section-label">Records</div>
+            <div class="milestone-list">
+                <div class="milestone-item" id="cs-day50">
+                    <div class="milestone-info"><div class="milestone-icon">⭐</div><div class="milestone-name">50 Days Count</div></div>
+                    <div class="milestone-status">0</div>
+                </div>
+                <div class="milestone-item" id="cs-day100">
+                    <div class="milestone-info"><div class="milestone-icon">💯</div><div class="milestone-name">100 Days Count</div></div>
+                    <div class="milestone-status">0</div>
+                </div>
+                <div class="milestone-item" id="bestStreakItem">
+                    <div class="milestone-info"><div class="milestone-icon">🏆</div><div class="milestone-name">Best Streak</div></div>
+                    <div class="milestone-status" id="longestStreakDisplay">0</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 1: Journey strong-day milestones -->
+        <div class="tab-content" id="tab-journey">
+            <div class="section-label">Strong</div>
+            <div class="milestone-list">
+                <div class="milestone-item" id="jm-75">
+                    <div class="milestone-info"><div class="milestone-icon">🌱</div><div class="milestone-name">75 Days</div></div>
+                    <div class="milestone-status">0</div>
+                </div>
+                <div class="milestone-item" id="jm-100">
+                    <div class="milestone-info"><div class="milestone-icon">🔥</div><div class="milestone-name">100 Days</div></div>
+                    <div class="milestone-status">0</div>
+                </div>
+                <div class="milestone-item" id="jm-150">
+                    <div class="milestone-info"><div class="milestone-icon">⚔️</div><div class="milestone-name">150 Days</div></div>
+                    <div class="milestone-status">0</div>
+                </div>
+            </div>
+            <div class="section-label">Warrior</div>
+            <div id="enduranceSection"></div>
+
+            <div class="section-label">King</div>
+            <div id="legendarySection"></div>
+
+            <!-- Hidden milestone items for renderJourneyMilestones DOM targeting -->
+            <div style="display:none">
+                <div class="milestone-item" id="jm-200"><div class="milestone-info"><div class="milestone-icon">⚡</div><div class="milestone-name">200 Days</div></div><div class="milestone-status">0</div></div>
+                <div class="milestone-item" id="jm-300"><div class="milestone-info"><div class="milestone-icon">⚡</div><div class="milestone-name">300 Days</div></div><div class="milestone-status">0</div></div>
+                <div class="milestone-item" id="jm-400"><div class="milestone-info"><div class="milestone-icon">💎</div><div class="milestone-name">400 Days</div></div><div class="milestone-status">0</div></div>
+                <div class="milestone-item" id="jm-500"><div class="milestone-info"><div class="milestone-icon">🦁</div><div class="milestone-name">500 Days</div></div><div class="milestone-status">0</div></div>
+                <div class="milestone-item" id="jm-750"><div class="milestone-info"><div class="milestone-icon">🦅</div><div class="milestone-name">750 Days</div></div><div class="milestone-status">0</div></div>
+                <div class="milestone-item" id="jm-1000"><div class="milestone-info"><div class="milestone-icon">👑</div><div class="milestone-name">1000 Days</div></div><div class="milestone-status">0</div></div>
+            </div>
+        </div>
+
+        <!-- Tab 2: Science — Brain recovery timeline -->
+        <div class="tab-content" id="tab-science">
+            <div class="science-list" id="scienceList"></div>
+            <div class="science-disclaimer">
+                ℹ️ Phases are based on your current streak. Timelines are drawn from neuroscience research on addiction recovery and community-reported experiences. Individual results vary.
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ MONTHLY GRID CARD ═════════════════════════════ -->
+    <div class="card">
+        <div class="chart-header">
+            <span class="chart-title" id="monthGridTitle">This Month</span>
+            <span class="chart-subtitle" id="monthGridSubtitle"></span>
+        </div>
+        <div class="month-grid" id="monthGrid"></div>
+        <div class="month-legend">
+            <span class="legend-dot strong"></span><span>Strong</span>
+            <span class="legend-dot slip"></span><span>Slip</span>
+            <span class="legend-dot empty"></span><span>No log</span>
+        </div>
+    </div>
+
+    <!-- ═══ HISTORY CHART CARD ════════════════════════════ -->
+    <div class="card">
+        <div class="chart-header">
+            <span class="chart-title" id="chartTitle">Streak History</span>
+            <span class="chart-subtitle" id="chartSubtitle"></span>
+        </div>
+
+        <!-- Streaks | Journeys toggle -->
+        <div class="chart-toggle" id="chartToggle">
+            <button class="chart-toggle-btn active" id="toggleStreaks" onclick="switchChartMode('streaks')">Streaks</button>
+            <button class="chart-toggle-btn"        id="toggleJourneys" onclick="switchChartMode('journeys')">Journeys</button>
+        </div>
+
+        <div class="chart-outer" id="chartOuter">
+            <svg class="chart-yaxis" id="chartYAxis" height="180"></svg>
+            <div style="position:relative;flex:1;">
+                <svg class="chart-inner" id="chartInner" height="180" style="width:100%;display:block;"></svg>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ DAILY KNOWLEDGE CARD ════════════════════════════ -->
+    <div class="card knowledge-card" id="knowledgeCard">
+        <div style="display:flex;align-items:flex-start;gap:12px;">
+            <div class="knowledge-emoji" id="knowledgeEmoji">🧠</div>
+            <div class="knowledge-content">
+                <div class="knowledge-headline" id="knowledgeHeadline"></div>
+                <div class="knowledge-body" id="knowledgeBody"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ LIFETIME STATS CARD ══════════════════════════ -->
+    <div class="card">
+        <div class="card-section-title">Lifetime Stats</div>
+        <div class="lifetime-stats">
+            <div class="lifetime-stat">
+                <div class="lifetime-stat-value" id="lifetimeJourneys">1</div>
+                <div class="lifetime-stat-label">Journeys</div>
+            </div>
+            <div class="lifetime-stat-divider"></div>
+            <div class="lifetime-stat">
+                <div class="lifetime-stat-value green" id="lifetimeStrong">0</div>
+                <div class="lifetime-stat-label">Strong Days</div>
+            </div>
+            <div class="lifetime-stat-divider"></div>
+            <div class="lifetime-stat">
+                <div class="lifetime-stat-value red" id="lifetimeRelapses">0</div>
+                <div class="lifetime-stat-label">Relapses</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ RESET CARD ════════════════════════════════════ -->
+    <div class="card" style="text-align:center;">
+        <button class="btn-reset" onclick="showModal('reset')" style="width:100%;">↺ Reset All Data</button>
+    </div>
+
+</div><!-- .container -->
+
+<!-- ── Onboarding ── -->
+<div class="onboarding-overlay" id="onboardingOverlay">
+    <div class="onboarding-card">
+
+        <!-- Slide 1 — Welcome -->
+        <div class="onboarding-slide active" id="slide-0">
+            <div class="onboarding-emoji">👑</div>
+            <div class="onboarding-title">Welcome to King</div>
+            <div class="onboarding-body">This is not another streak app that punishes you for slipping. King is built differently — for the long journey, not the perfect day.</div>
+        </div>
+
+        <!-- Slide 2 — The problem -->
+        <div class="onboarding-slide" id="slide-1">
+            <div class="onboarding-emoji">💔</div>
+            <div class="onboarding-title">The Old Way Fails</div>
+            <div class="onboarding-body">One slip. Streak gone. Start over from zero. That's why most people quit — not because they're weak, but because the system is broken.</div>
+        </div>
+
+        <!-- Slide 3 — The journey system -->
+        <div class="onboarding-slide" id="slide-2">
+            <div class="onboarding-emoji">⚡</div>
+            <div class="onboarding-title">10 Chances Per Journey</div>
+            <div class="onboarding-body">A slip costs a chance — not your journey. You have 10 chances. Use them. Your journey ends only when all 10 are gone. Then a new one begins.</div>
+        </div>
+
+        <!-- Slide 4 — Progress not perfection -->
+        <div class="onboarding-slide" id="slide-3">
+            <div class="onboarding-emoji">📈</div>
+            <div class="onboarding-title">Progress, Not Perfection</div>
+            <div class="onboarding-body">Each journey, aim for more strong days than the last. More wins. Fewer slips. Your success rate grows. That's what recovery actually looks like.</div>
+        </div>
+
+        <!-- Slide 5 — The destination -->
+        <div class="onboarding-slide" id="slide-4">
+            <div class="onboarding-emoji">🦁</div>
+            <div class="onboarding-title">Become the King</div>
+            <div class="onboarding-body">Strong → Warrior → King. Every day you log is a step. Every urge you resist is proof. The crown isn't given — it's earned. Your journey starts now.</div>
+        </div>
+
+        <!-- Dots -->
+        <div class="onboarding-dots">
+            <div class="onboarding-dot active" id="dot-0"></div>
+            <div class="onboarding-dot" id="dot-1"></div>
+            <div class="onboarding-dot" id="dot-2"></div>
+            <div class="onboarding-dot" id="dot-3"></div>
+            <div class="onboarding-dot" id="dot-4"></div>
+        </div>
+
+        <!-- Buttons -->
+        <button class="onboarding-next" id="onboardingBtn" onclick="onboardingNext()">Next →</button>
+        <button class="onboarding-skip" onclick="completeOnboarding()">Skip</button>
+    </div>
+</div>
+
+<!-- ── Yesterday reminder overlay ── -->
+<div class="overlay" id="reminderOverlay">
+    <div class="overlay-card" onclick="event.stopPropagation()" style="text-align:center;">
+        <div style="font-size:48px;margin-bottom:12px;">📅</div>
+        <div style="font-size:20px;font-weight:700;color:var(--text);margin-bottom:8px;letter-spacing:-0.3px;">Did you stay strong yesterday?</div>
+        <div style="font-size:14px;color:var(--text-muted);line-height:1.5;margin-bottom:24px;">You forgot to log. How was yesterday?</div>
+        <div style="display:flex;gap:12px;">
+            <button onclick="logYesterday('strong')" style="flex:1;padding:13px;background:linear-gradient(180deg,var(--green-light),var(--green));color:white;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;">✓ I Stayed Strong</button>
+            <button onclick="logYesterday('slip')" style="flex:1;padding:13px;background:linear-gradient(180deg,#ff453a,#ff3b30);color:white;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;">✕ I Slipped</button>
+        </div>
+    </div>
+</div>
+
+
+
+<!-- ── Toast notification ── -->
+<div id="toast"></div>
+
+<!-- ── Confetti canvas ── -->
+<canvas id="confettiCanvas"></canvas>
+
+<!-- ── Celebration popup ── -->
+<div class="celebration-overlay" id="celebrationOverlay" onclick="closeCelebration()">
+    <div class="celebration-card" onclick="event.stopPropagation()">
+        <span class="celebration-emoji" id="celebEmoji">🎉</span>
+        <div class="celebration-stage"   id="celebStage">MILESTONE</div>
+        <div class="celebration-title"   id="celebTitle">Achievement Unlocked!</div>
+        <div class="celebration-message" id="celebMessage">Keep going.</div>
+        <button class="celebration-close" onclick="closeCelebration()">Keep Going 💪</button>
+    </div>
+</div>
+
+<!-- ── Confirmation modal ── -->
+<div class="modal" id="confirmModal">
+    <div class="modal-card">
+        <h3 id="modalMessage">Are you sure?</h3>
+        <!-- Reset confirmation input — only shown for reset action -->
+        <div id="resetConfirmWrap" style="display:none;margin-bottom:16px;">
+            <p style="font-size:13px;color:#86868b;margin-bottom:10px;line-height:1.5;">This will erase all your streaks, journeys and history forever. Type <strong>RESET</strong> to confirm.</p>
+            <input id="resetConfirmInput" type="text" placeholder="Type RESET"
+                oninput="checkResetInput()"
+                style="width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:10px;font-size:15px;font-family:inherit;outline:none;letter-spacing:1px;text-transform:uppercase;"/>
+        </div>
+        <div class="modal-buttons">
+            <button class="modal-btn cancel"  onclick="closeModal()">Cancel</button>
+            <button class="modal-btn confirm" id="modalConfirmBtn" onclick="confirmAction()">Confirm</button>
+        </div>
+    </div>
+</div>
+
+<!-- ── Urge surfing timer overlay ── -->
+<div class="overlay" id="urgeOverlay">
+    <div class="overlay-card" onclick="event.stopPropagation()">
+        <div class="urge-title">🌊 Surf the Urge</div>
+        <div class="urge-subtitle">Urges peak and fade in 15 minutes.<br>Just breathe. You can do this.</div>
+
+        <!-- Breathing ring -->
+        <div class="breathing-ring-wrap">
+            <svg class="breathing-ring" viewBox="0 0 120 120">
+                <circle cx="60" cy="60" r="54" fill="none" stroke="rgba(52,199,89,0.15)" stroke-width="6"/>
+                <circle cx="60" cy="60" r="54" fill="none" stroke="#34c759" stroke-width="6"
+                    stroke-dasharray="339" stroke-dashoffset="339"
+                    stroke-linecap="round" id="breathRing"
+                    style="transform:rotate(-90deg);transform-origin:center;transition:stroke-dashoffset 4s ease-in-out"/>
+                <text x="60" y="56" text-anchor="middle" font-size="13" font-weight="600"
+                    fill="#34c759" font-family="-apple-system,sans-serif" id="breathLabel">Breathe in</text>
+                <text x="60" y="73" text-anchor="middle" font-size="22" font-weight="700"
+                    fill="#1d1d1f" font-family="-apple-system,sans-serif" id="urgeCountdown">15:00</text>
+            </svg>
+        </div>
+
+        <div class="urge-phase" id="urgePhase">Inhale slowly for 4 seconds…</div>
+
+        <button class="btn-urge-survived" onclick="urgeSurvived()">✓ I Survived It</button>
+        <button class="btn-urge-cancel"   onclick="closeUrge()">I couldn't hold it</button>
+    </div>
+</div>
+
+<!-- ── Journey comparison card ── -->
+<div class="overlay" id="journeyCompareOverlay">
+    <div class="overlay-card compare-card" onclick="event.stopPropagation()">
+        <div class="compare-header">
+            <div class="compare-badge">JOURNEY COMPLETE</div>
+            <div class="compare-title" id="compareTitleText">Journey 2 vs Journey 1</div>
+        </div>
+        <div class="compare-grid" id="compareGrid"></div>
+        <div class="compare-message" id="compareMessage"></div>
+        <button class="btn-compare-close" onclick="closeCompare()">Start Journey <span id="compareNextNum">3</span> 💪</button>
+    </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════
+//  PWA — Service Worker Registration
+// ════════════════════════════════════════════════════════
+
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
+}
+
+
+// ════════════════════════════════════════════════════════
+//  STORAGE LAYER
+//  Swap these two functions for Firebase calls tomorrow —
+//  the rest of the code doesn't need to change.
+// ════════════════════════════════════════════════════════
+
+const STORAGE_KEY = 'habitTracker_v3';
+
+function loadFromStorage() {
+    try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        return raw ? JSON.parse(raw) : null;
+    } catch (e) {
+        return null;
+    }
+}
+
+function saveToStorage(state) {
+    try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    } catch (e) {
+        // Storage unavailable (e.g. WhatsApp webview) — runs in memory only
+    }
+}
+
+// In-memory fallback for restricted webviews
+let _memStorage = {};
+
+function safeGet(key) {
+    try { return localStorage.getItem(key); }
+    catch (e) { return _memStorage[key] || null; }
+}
+
+function safeSet(key, val) {
+    try { localStorage.setItem(key, val); }
+    catch (e) { _memStorage[key] = val; }
+}
+
+function safeRemove(key) {
+    try { localStorage.removeItem(key); }
+    catch (e) { delete _memStorage[key]; }
+}
+
+
+// ════════════════════════════════════════════════════════
+//  DEFAULT STATE
+//  Single source of truth — every field documented.
+// ════════════════════════════════════════════════════════
+
+function getDefaultState() {
+    return {
+        // ── Current day ─────────────────────────────────
+        calendarDay:       1,      // day number within the current journey
+        todayStatus:       'none', // 'none' | 'success' | 'failed'
+        todayFailCount:    0,      // how many times slipped today
+        lastOpenedDate:    '',     // YYYY-MM-DD — used to detect new day on open
+        lastCheckedDate:   '',     // YYYY-MM-DD — prevents duplicate checkNewDay calls
+
+        // ── Current journey ──────────────────────────────
+        attempt:           1,      // journey number (increments after all 10 failures used)
+        score: {
+            success:       0,      // strong days this journey
+            failures:      0,      // slips this journey (max 10)
+        },
+
+        // ── Current streak ───────────────────────────────
+        currentStreak:     0,      // consecutive strong days right now
+        longestStreak:     0,      // personal best streak ever
+
+        // ── Streak counters ──────────────────────────────
+        day50Count:        0,      // how many times reached a 50-day streak
+        day100Count:       0,      // how many times reached a 100-day streak
+
+        // ── Journey milestones (how many times reached each) ─
+        journeyMilestones: {
+            75: 0, 100: 0, 150: 0, 200: 0,
+            300: 0, 400: 0, 500: 0, 750: 0, 1000: 0,
+        },
+
+        // ── Records ──────────────────────────────────────
+        bestJourney: { success: 0, failures: 0 }, // best score ever
+
+        // ── History ──────────────────────────────────────
+        // Each completed journey: { attempt, score: {success, failures}, date }
+        completedJourneys: [],
+
+        // All streaks within the current journey (persisted so page-refresh safe)
+        // Each item is a number (the streak length when it ended)
+        currentJourneyStreaks: [],
+
+        // Streaks from past completed journeys
+        // Each item: { attempt, streaks: [number], date }
+        pastJourneyStreaks: [],
+
+        // How many urges surfed across all journeys (never resets on journey end)
+        urgesSurfed: 0,
+
+        // Urge time log — [{ hour: 22, date: 'YYYY-MM-DD' }, ...]
+        // Used to detect peak urge hours and show advance warnings
+        urgeLog: [],
+
+        // Daily log: { 'YYYY-MM-DD': 'strong' | 'slip' }
+        dailyLog: {},
+
+        // Personal best popup — true once fired, resets on slip
+        recordCelebrated: false,
+    };
+}
+
+
+// ════════════════════════════════════════════════════════
+//  APP STATE
+// ════════════════════════════════════════════════════════
+
+let state = getDefaultState();
+let pendingAction = null; // tracks what the confirm modal will do
+let currentTab    = 0;    // 0 = Streak, 1 = Journey Milestones
+let chartPage     = -1;   // -1 means "snap to latest on next draw"
+let chartMode     = 'streaks'; // 'streaks' | 'journeys'
+
+function switchChartMode(mode) {
+    chartMode = mode;
+    chartPage = -1;
+    document.getElementById('toggleStreaks').classList.toggle('active', mode === 'streaks');
+    document.getElementById('toggleJourneys').classList.toggle('active', mode === 'journeys');
+    document.getElementById('chartTitle').textContent = mode === 'streaks' ? 'Streak History' : 'Journey Progress';
+    renderChart();
+}
+
+
+// ════════════════════════════════════════════════════════
+//  INIT
+// ════════════════════════════════════════════════════════
+
+function init() {
+    const saved = loadFromStorage();
+    if (saved) {
+        // Merge saved data with defaults so new fields added later still exist
+        state = { ...getDefaultState(), ...saved };
+
+        // Back-compat: old key names → new names
+        if (saved.currentScore !== undefined && saved.score === undefined) {
+            state.score = saved.currentScore;
+        }
+        if (saved.highestScore !== undefined && state.bestJourney.success === 0) {
+            state.bestJourney = saved.highestScore;
+        }
+        if (saved.attemptHistory !== undefined && state.completedJourneys.length === 0) {
+            state.completedJourneys = saved.attemptHistory;
+        }
+        if (saved.streakHistory !== undefined && state.pastJourneyStreaks.length === 0) {
+            state.pastJourneyStreaks = saved.streakHistory;
+        }
+        if (saved.currentAttemptStreaks !== undefined) {
+            state.currentJourneyStreaks = saved.currentAttemptStreaks;
+        }
+        // Nested objects need explicit merge
+        state.journeyMilestones = { ...getDefaultState().journeyMilestones, ...(saved.journeyMilestones || {}) };
+    }
+    renderAll();
+}
+
+
+// ════════════════════════════════════════════════════════
+//  USER ACTIONS
+// ════════════════════════════════════════════════════════
+
+function handleSuccess() {
+    if (state.todayStatus === 'failed') {
+        alert('You already slipped today. Stay strong tomorrow!');
+        return;
+    }
+    if (state.todayStatus === 'success') return; // already logged
+    showModal('success');
+}
+
+function showModal(action) {
+    pendingAction = action;
+    document.getElementById('modalMessage').textContent =
+        action === 'success' ? 'Mark today as successful?' :
+        action === 'reset'   ? 'Reset all data?' :
+        'Today was hard. Log it and keep going?';
+    document.getElementById('modalConfirmBtn').textContent =
+        action === 'success' ? 'Confirm' :
+        action === 'reset'   ? 'Yes, reset all' :
+        'Yes, log it';
+
+    // Show RESET input only for reset action
+    const resetWrap  = document.getElementById('resetConfirmWrap');
+    const resetInput = document.getElementById('resetConfirmInput');
+    const confirmBtn = document.getElementById('modalConfirmBtn');
+    if (action === 'reset') {
+        resetWrap.style.display = 'block';
+        resetInput.value = '';
+        confirmBtn.disabled = true;
+        confirmBtn.style.opacity = '0.4';
+    } else {
+        resetWrap.style.display = 'none';
+        confirmBtn.disabled = false;
+        confirmBtn.style.opacity = '1';
+    }
+
+    document.getElementById('confirmModal').classList.add('active');
+}
+
+function checkResetInput() {
+    const val = document.getElementById('resetConfirmInput').value.trim().toUpperCase();
+    const btn = document.getElementById('modalConfirmBtn');
+    btn.disabled    = val !== 'RESET';
+    btn.style.opacity = val !== 'RESET' ? '0.4' : '1';
+}
+
+function closeModal() {
+    document.getElementById('confirmModal').classList.remove('active');
+    document.getElementById('resetConfirmInput').value = '';
+    document.getElementById('resetConfirmWrap').style.display = 'none';
+    pendingAction = null;
+}
+
+function confirmAction() {
+    if (pendingAction === 'success') recordSuccess();
+    else if (pendingAction === 'fail') recordFailure();
+    else if (pendingAction === 'reset') resetAll();
+    closeModal();
+}
+
+function resetAll() {
+    safeRemove(STORAGE_KEY);
+    state     = getDefaultState();
+    chartPage = -1;
+    chartMode = 'streaks';
+    currentTab = 0;
+    switchTab(0);
+    saveToStorage(state);
+    renderAll();
+}
+
+function testNextDay() {
+    if (state.score.failures >= 10) { endJourney(); return; }
+    state.calendarDay++;
+    state.todayStatus    = 'none';
+    state.todayFailCount = 0;
+    chartPage = -1;
+    saveAndRender();
+}
+
+function recordSuccess() {
+    state.score.success++;
+    state.currentStreak++;
+    state.todayStatus = 'success';
+    state.lastOpenedDate = todayKey();
+    state.dailyLog = state.dailyLog || {};
+    state.dailyLog[`day-${state.calendarDay}`] = { status: 'strong', day: state.calendarDay, date: todayKey() };
+
+    // Fire personal best popup only once per streak attempt
+    // recordCelebrated resets to false when streak resets
+    const prevLongest = state.longestStreak;
+    const isNewRecord = state.currentStreak > prevLongest
+        && prevLongest > 0
+        && !state.recordCelebrated
+        && !STREAK_MILESTONES[state.currentStreak];
+
+    if (state.currentStreak > state.longestStreak) {
+        state.longestStreak = state.currentStreak;
+    }
+
+    if (isNewRecord) {
+        state.recordCelebrated = true;
+        setTimeout(() => showCelebration({
+            emoji:   '🏆',
+            stage:   'NEW PERSONAL BEST',
+            title:   `${state.currentStreak} Days — New Record!`,
+            message: `You just beat your personal best! Old record: ${prevLongest} days. You are rewriting your own limits.`,
+        }), 400);
+    }
+
+    // Check fixed-day streak milestones (1, 3, 7, 10, 14, 21, 30, 50, 100)
+    triggerStreakMilestone(state.currentStreak);
+
+    // Track 50-day and 100-day counts
+    if (state.currentStreak === 50)  state.day50Count++;
+    if (state.currentStreak === 100) state.day100Count++;
+
+    // Check journey strong-day milestones (75, 100, 150...)
+    checkJourneyMilestone(state.score.success);
+
+    // Update best journey record
+    updateBestJourney();
+
+    chartPage = -1;
+    saveAndRender();
+    showToast(state.currentStreak);
+}
+
+function recordFailure() {
+    // Record the streak that just ended
+    // First slip of the day ends the current streak; repeat slips on same day each log a 0
+    const streakToRecord = state.todayStatus === 'none' ? state.currentStreak : 0;
+    state.currentJourneyStreaks.push(streakToRecord);
+
+    state.score.failures++;
+    state.currentStreak    = 0;
+    state.recordCelebrated = false;
+    state.todayStatus      = 'failed';
+    state.dailyLog = state.dailyLog || {};
+    state.dailyLog[`day-${state.calendarDay}`] = { status: 'slip', day: state.calendarDay, date: todayKey() };
+    state.todayFailCount++;
+
+    updateBestJourney();
+
+
+    // Journey ends when all 10 failures are used
+    if (state.score.failures >= 10) {
+        endJourney();
+    } else {
+        chartPage = -1;
+        saveAndRender();
+        showToast(0, `${state.score.failures} chance${state.score.failures > 1 ? 's' : ''} used. Keep moving forward. Journey Continues.`);
+    }
+}
+
+function endJourney() {
+    // Archive this journey
+    state.completedJourneys.push({
+        attempt: state.attempt,
+        score:   { ...state.score },
+        date:    new Date().toISOString(),
+    });
+
+    // Archive this journey's streaks
+    state.pastJourneyStreaks.push({
+        attempt: state.attempt,
+        streaks: [...state.currentJourneyStreaks],
+        date:    new Date().toISOString(),
+    });
+
+    // Keep only last 7 completed journeys in history
+    if (state.completedJourneys.length > 7) {
+        state.completedJourneys   = state.completedJourneys.slice(-7);
+        state.pastJourneyStreaks  = state.pastJourneyStreaks.slice(-7);
+    }
+
+    // Capture current journey data for comparison popup before resetting
+    const finishedAttempt = state.attempt;
+    const finishedScore   = { ...state.score };
+    const prevJourney     = state.completedJourneys.length >= 2
+        ? state.completedJourneys[state.completedJourneys.length - 2]
+        : null;
+
+    // Reset state immediately — don't wait for popup
+    const survivingUrges = state.urgesSurfed || 0;
+    const survivingLog   = state.urgeLog || [];
+    state.attempt++;
+    state.score                 = { success: 0, failures: 0 };
+    state.currentStreak         = 0;
+    state.calendarDay           = 1;
+    state.currentJourneyStreaks = [];
+    state.recordCelebrated      = false;
+    state.dailyLog              = {};
+    state.todayStatus           = 'none';
+    state.todayFailCount        = 0;
+    state.urgesSurfed           = survivingUrges;
+    state.urgeLog               = survivingLog;
+    chartPage = -1;
+    saveAndRender();
+
+    // Show comparison popup after a short delay (purely UI — state already saved)
+    setTimeout(() => {
+        showJourneyComparison(
+            { attempt: finishedAttempt, score: finishedScore },
+            prevJourney
+        );
+    }, 600);
+}
+
+// ════════════════════════════════════════════════════════
+//  MILESTONE HELPERS
+// ════════════════════════════════════════════════════════
+
+function updateBestJourney() {
+    const { success, failures } = state.score;
+    const best = state.bestJourney;
+
+    const isBetter =
+        success > best.success ||
+        (success === best.success && failures < best.failures);
+
+    if (isBetter) {
+        state.bestJourney = { success, failures };
+    }
+}
+
+function checkJourneyMilestone(successCount) {
+    const milestones = [30, 50, 75, 100, 150, 200, 300, 400, 500, 750, 1000];
+    if (milestones.includes(successCount)) {
+        if (successCount >= 75) {
+            state.journeyMilestones[successCount] = (state.journeyMilestones[successCount] || 0) + 1;
+        }
+        triggerJourneyMilestone(successCount);
+    }
+}
+
+
+// ════════════════════════════════════════════════════════
+//  RENDER — all DOM updates go through here
+// ════════════════════════════════════════════════════════
+
+function saveAndRender() {
+    chartPage = (chartPage === -1) ? -1 : chartPage; // keep intent
+    saveToStorage(state);
+    renderAll();
+}
+
+function renderAll() {
+    renderTopStats();
+    renderChances();
+    renderButtons();
+    renderStreakMilestones();
+    renderJourneyMilestones();
+    renderBrainCard();
+    renderKnowledgeCard();
+    renderLifetimeStats();
+    renderMonthGrid();
+    renderChart();
+}
+
+function renderTopStats() {
+    document.getElementById('calendarDay').textContent    = state.calendarDay;
+    document.getElementById('currentJourney').textContent = `${state.score.success}/${state.score.failures}`;
+    document.getElementById('bestJourney').textContent    = `${state.bestJourney.success}/${state.bestJourney.failures}`;
+}
+
+function renderChances() {
+    const grid = document.getElementById('chancesGrid');
+    grid.innerHTML = '';
+
+    for (let i = 0; i < 10; i++) {
+        const div = document.createElement('div');
+        div.className = 'chance' + (i < state.score.failures ? ' used' : '');
+        div.textContent = '💪';
+        grid.appendChild(div);
+    }
+
+    const remaining = 10 - state.score.failures;
+    document.getElementById('chancesLabel').textContent =
+        `💪 ${remaining} ${remaining === 1 ? 'chance' : 'chances'} remaining`;
+}
+
+function renderButtons() {
+    const successBtn = document.getElementById('successBtn');
+    const failBtn    = document.getElementById('failBtn');
+
+    if (state.todayStatus === 'success') {
+        successBtn.disabled = true;
+        successBtn.classList.add('logged');
+        successBtn.textContent = 'Strong 💪';
+        failBtn.disabled = true;
+        failBtn.textContent = '✕ Blocked';
+
+    } else if (state.todayStatus === 'failed') {
+        successBtn.disabled = true;
+        successBtn.classList.remove('logged');
+        successBtn.textContent = 'Plan to avoid it next time';
+
+        const ORDINALS = ['', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th', '10th'];
+        const count    = state.todayFailCount;
+        failBtn.disabled   = false;
+        failBtn.textContent = count === 0
+            ? '✕ I Slipped'
+            : `✕ I Slipped ${ORDINALS[count] || `${count}th`} time`;
+
+    } else {
+        successBtn.disabled = false;
+        successBtn.classList.remove('logged');
+        successBtn.textContent = '✓ I STAYED STRONG';
+        failBtn.disabled   = false;
+        failBtn.textContent = '✕ I Slipped';
+    }
+}
+
+function renderStreakMilestones() {
+    const streak = state.currentStreak;
+
+    const STREAK_MILESTONES_LIST = [
+        { id: 'cs-day1',  day: 1,  baseName: 'Day 1',  label: 'Started'      },
+        { id: 'cs-day3',  day: 3,  baseName: 'Day 3',  label: 'Early Battle' },
+        { id: 'cs-week1', day: 7,  baseName: 'Week 1', label: 'First Week'   },
+        { id: 'cs-day10', day: 10, baseName: 'Day 10', label: 'Ten Days'     },
+        { id: 'cs-week2', day: 14, baseName: 'Week 2', label: 'Foundation'   },
+        { id: 'cs-week3', day: 21, baseName: 'Week 3', label: 'Building'     },
+        { id: 'cs-day30', day: 30, baseName: 'Day 30', label: 'One Month'    },
+    ];
+
+    STREAK_MILESTONES_LIST.forEach(({ id, day, baseName, label }) => {
+        const item   = document.getElementById(id);
+        const nameEl = item.querySelector('.milestone-name');
+        const statEl = item.querySelector('.milestone-status');
+
+        if (streak === 0) {
+            setMilestoneState(item, null);
+            nameEl.textContent = baseName;
+            statEl.textContent = '—';
+        } else if (streak >= day) {
+            setMilestoneState(item, 'achieved-glow');
+            nameEl.textContent = `${baseName} — ${label}`;
+            statEl.textContent = '✓';
+        } else {
+            setMilestoneState(item, null);
+            nameEl.textContent = baseName;
+            statEl.textContent = '—';
+        }
+    });
+
+    // Count badges
+    renderCountMilestone('cs-day50',  streak >= 50,  state.day50Count);
+    renderCountMilestone('cs-day100', streak >= 100, state.day100Count);
+
+    // Best streak (gold when live record, default when streak ended)
+    const best = document.getElementById('bestStreakItem');
+    const disp = document.getElementById('longestStreakDisplay');
+    if (state.currentStreak > 0 && state.currentStreak >= state.longestStreak) {
+        setMilestoneState(best, 'golden');
+        disp.textContent = state.currentStreak;
+    } else {
+        setMilestoneState(best, null);
+        disp.textContent = state.longestStreak;
+    }
+}
+
+/** Sets achieved/achieved-glow/golden/null on a milestone item */
+function setMilestoneState(item, className) {
+    item.classList.remove('achieved', 'achieved-glow', 'golden');
+    if (className) item.classList.add(className);
+}
+
+/** Renders a count-based milestone (50-day, 100-day) */
+function renderCountMilestone(id, isActive, count) {
+    const item   = document.getElementById(id);
+    const statEl = item.querySelector('.milestone-status');
+    if (isActive) {
+        setMilestoneState(item, 'achieved-glow');
+        statEl.textContent = count > 0 ? count : '✓';
+    } else {
+        setMilestoneState(item, null);
+        statEl.textContent = count > 0 ? count : '0';
+    }
+}
+
+function renderJourneyMilestones() {
+    const s = state.score.success;
+
+    // ── Identity (always visible) ──────────────────────
+    [75, 100, 150].forEach(day => {
+        const item   = document.getElementById(`jm-${day}`);
+        const statEl = item ? item.querySelector('.milestone-status') : null;
+        const reached = s >= day;
+        const count   = state.journeyMilestones[day] || 0;
+        if (item) setMilestoneState(item, reached ? 'achieved-glow' : null);
+        if (statEl) statEl.textContent = reached ? (count > 0 ? count : '✓') : '0';
+    });
+
+    // ── Endurance — progressive reveal ─────────────────
+    const ENDURANCE = [
+        { day: 200, emoji: '🛡️', label: '200 Days', unlockAt: 150 },
+        { day: 300, emoji: '⚡', label: '300 Days', unlockAt: 200 },
+        { day: 400, emoji: '💎', label: '400 Days', unlockAt: 300 },
+    ];
+
+    const endEl = document.getElementById('enduranceSection');
+    if (endEl) {
+        endEl.innerHTML = '';
+        ENDURANCE.forEach(m => {
+            if (s >= m.unlockAt) {
+                // Revealed — show milestone card
+                const reached = s >= m.day;
+                const count   = state.journeyMilestones[m.day] || 0;
+                const cls     = reached ? 'milestone-item achieved-glow' : 'milestone-item';
+                const status  = reached ? (count > 0 ? count : '✓') : '0';
+                endEl.innerHTML += `
+                    <div class="${cls}" style="margin-bottom:10px">
+                        <div class="milestone-info">
+                            <div class="milestone-icon">${m.emoji}</div>
+                            <div class="milestone-name">${m.label}</div>
+                        </div>
+                        <div class="milestone-status">${status}</div>
+                    </div>`;
+            } else {
+                // Not yet unlocked — show next-unlock teaser once
+                endEl.innerHTML += `
+                    <div class="next-unlock">
+                        <span class="next-unlock-icon">🔒</span>
+                        Keep going to unlock
+                    </div>`;
+                return false; // stop showing further
+            }
+        });
+    }
+
+    // ── Legendary — full mystery until 400 days ────────
+    const LEGENDARY = [
+        { day: 500, emoji: '🦁', label: '500 Days', unlockAt: 400 },
+        { day: 750, emoji: '🦅', label: '750 Days', unlockAt: 500 },
+        { day: 1000, emoji: '👑', label: '1000 Days', unlockAt: 750 },
+    ];
+
+    const legEl = document.getElementById('legendarySection');
+    if (legEl) {
+        legEl.innerHTML = '';
+        if (s < 400) {
+            // Full mystery — just a lock, nothing else
+            legEl.innerHTML = `<div class="mystery-lock"><span class="mystery-lock-icon">🔒</span></div>`;
+        } else {
+            LEGENDARY.forEach(m => {
+                if (s >= m.unlockAt) {
+                    const reached = s >= m.day;
+                    const count   = state.journeyMilestones[m.day] || 0;
+                    const cls     = reached ? 'milestone-item achieved-glow' : 'milestone-item';
+                    const status  = reached ? (count > 0 ? count : '✓') : '0';
+                    legEl.innerHTML += `
+                        <div class="${cls}" style="margin-bottom:10px">
+                            <div class="milestone-info">
+                                <div class="milestone-icon">${m.emoji}</div>
+                                <div class="milestone-name">${m.label}</div>
+                            </div>
+                            <div class="milestone-status">${status}</div>
+                        </div>`;
+                } else {
+                    legEl.innerHTML += `
+                        <div class="next-unlock">
+                            <span class="next-unlock-icon">🔒</span>
+                            Keep going to unlock
+                        </div>`;
+                    return false;
+                }
+            });
+        }
+    }
+}
+
+function switchTab(index) {
+    currentTab = index;
+    document.querySelectorAll('.tab').forEach((tab, i) => {
+        tab.classList.toggle('active', i === index);
+    });
+    document.querySelectorAll('.tab-content').forEach((pane, i) => {
+        pane.classList.toggle('active', i === index);
+    });
+    // Re-render science tab when switched to so it's always fresh
+    if (index === 2) renderBrainCard();
+}
+
+
+// ════════════════════════════════════════════════════════
+//  STREAK CHART
+// ════════════════════════════════════════════════════════
+
+function getChartWindow() { return chartMode === 'journeys' ? 4 : 5; }
+
+/**
+ * Returns data points for the chart based on current chartMode.
+ * Streaks mode: every individual streak across all journeys.
+ * Journeys mode: total strong days per completed journey.
+ */
+function getChartPoints() {
+    if (chartMode === 'journeys') {
+        // One point per completed journey
+        const points = state.completedJourneys.map(j => ({
+            val:   j.score.success,
+            label: `J${j.attempt}`,
+        }));
+        // Add current in-progress journey if it has any strong days
+        if (state.score.success > 0) {
+            points.push({ val: state.score.success, label: `J${state.attempt}…`, live: true });
+        }
+        return points;
+    }
+
+    // Streaks mode — every individual streak in order
+    const points = [];
+    let num = 1;
+    state.pastJourneyStreaks.forEach(journey => {
+        (journey.streaks || []).forEach(val => {
+            points.push({ val, label: `S${num++}` });
+        });
+    });
+    (state.currentJourneyStreaks || []).forEach(val => {
+        points.push({ val, label: `S${num++}` });
+    });
+    if (state.currentStreak > 0) {
+        points.push({ val: state.currentStreak, label: `S${num}…`, live: true });
+    }
+    return points;
+}
+
+function chartNav(dir) {
+    const points  = getChartPoints();
+    const maxPage = Math.max(0, points.length - getChartWindow());
+    if (chartPage === -1) chartPage = maxPage;
+    const jump = Math.max(1, Math.floor(points.length / 5));
+    chartPage = Math.clamp(chartPage + dir * jump, 0, maxPage);
+    renderChart();
+}
+
+// Math.clamp polyfill (not in all browsers yet)
+Math.clamp = (val, min, max) => Math.min(max, Math.max(min, val));
+
+function renderChart() {
+    const points  = getChartPoints();
+    const outer   = document.getElementById('chartOuter');
+    const H = 180, padT = 24, padB = 36;
+    const cH = H - padT - padB;
+    const VW = 400;
+    const padX = VW * 0.04;
+    const yFracs = [0, 0.25, 0.5, 0.75, 1];
+
+    if (points.length === 0) {
+        outer.style.display = 'flex';
+
+        // Empty graph — show axes with default scale of 30
+        const yMax = 30;
+        const yAxisSvg = document.getElementById('chartYAxis');
+        yAxisSvg.setAttribute('width', 36);
+        yAxisSvg.setAttribute('height', H);
+        yAxisSvg.innerHTML = yFracs.map(f => {
+            const y = padT + cH - f * cH;
+            return `<text x="32" y="${y + 4}" text-anchor="end" font-size="9" font-weight="500"
+                fill="rgba(134,134,139,0.5)" font-family="-apple-system,sans-serif">${Math.round(f * yMax)}</text>`;
+        }).join('');
+
+        const gridLines = yFracs.map(f => {
+            const y = padT + cH - f * cH;
+            return `<line x1="${padX}" y1="${y}" x2="${VW - padX}" y2="${y}"
+                stroke="rgba(0,0,0,${f === 0 ? '0.10' : '0.04'})"
+                stroke-width="${f === 0 ? 1.5 : 1}"/>`;
+        }).join('');
+
+        document.getElementById('chartInner').setAttribute('viewBox', `0 0 ${VW} ${H}`);
+        document.getElementById('chartInner').innerHTML = `
+            ${gridLines}
+            <line x1="0" y1="${padT}" x2="0" y2="${padT + cH}"
+                stroke="rgba(0,0,0,0.10)" stroke-width="1.5"/>
+            <text x="${VW/2}" y="${padT + cH/2}" text-anchor="middle"
+                font-size="13" fill="rgba(134,134,139,0.6)"
+                font-family="-apple-system,sans-serif">Your history starts today</text>`;
+        document.getElementById('chartSubtitle').textContent = '';
+        return;
+    }
+
+    outer.style.display = 'flex';
+
+    const maxPage = Math.max(0, points.length - getChartWindow());
+    if (chartPage === -1 || chartPage > maxPage) chartPage = maxPage;
+
+    const show = points.slice(chartPage, chartPage + getChartWindow());
+
+    // Subtitle
+    const unit = chartMode === 'journeys' ? 'journey' : 'streak';
+    const from = chartPage + 1, to = chartPage + show.length;
+    document.getElementById('chartSubtitle').textContent =
+        points.length <= getChartWindow()
+            ? `${points.length} ${unit}${points.length !== 1 ? 's' : ''}`
+            : `${chartMode === 'journeys' ? 'J' : 'S'}${from}–${chartMode === 'journeys' ? 'J' : 'S'}${to} of ${points.length}`;
+
+    // Arrows
+
+
+    // ── Layout ───────────────────────────────────────
+    // Y scale — fixed to all-time best with 25% headroom
+    const allTimeMax = Math.max(...points.map(p => p.val), 1);
+    const yMax       = Math.max(Math.ceil(allTimeMax * 1.25 / 5) * 5, 5);
+    const bestVal = chartMode === 'journeys' ? state.bestJourney.success : state.longestStreak;
+
+    // ── Y axis: 5 evenly spaced labels ───────────────
+    const yAxisSvg = document.getElementById('chartYAxis');
+    yAxisSvg.setAttribute('width', 36);
+    yAxisSvg.setAttribute('height', H);
+    yAxisSvg.innerHTML = yFracs.map(f => {
+        const y = padT + cH - f * cH;
+        return `<text x="32" y="${y + 4}" text-anchor="end" font-size="9" font-weight="500"
+            fill="rgba(134,134,139,0.85)" font-family="-apple-system,sans-serif">${Math.round(f * yMax)}</text>`;
+    }).join('');
+
+    // ── Grid lines + Y axis line ──────────────────────
+    const gridLines = yFracs.map(f => {
+        const y = padT + cH - f * cH;
+        return `<line x1="${padX}" y1="${y}" x2="${VW - padX}" y2="${y}"
+            stroke="rgba(0,0,0,${f === 0 ? '0.10' : '0.05'})"
+            stroke-width="${f === 0 ? 1.5 : 1}"/>`;
+    }).join('') +
+    // Vertical Y axis line — sits at left edge, before the first data point
+    `<line x1="0" y1="${padT}" x2="0" y2="${padT + cH}"
+        stroke="rgba(0,0,0,0.12)" stroke-width="1.5"/>`;
+
+    // ── Coordinates ──────────────────────────────────
+    const isCurrentBest = state.currentStreak > 0 && state.currentStreak === state.longestStreak;
+
+    const pts = show.map((p, i) => ({
+        x:          show.length === 1 ? VW / 2 : padX + (i / (show.length - 1)) * (VW - padX * 2 - 24),
+        y:          padT + cH - (p.val / yMax) * cH,
+        val:        p.val,
+        label:      p.label,
+        isBest:     !p.live && p.val === bestVal && bestVal > 0,
+        isLive:     !!p.live,
+        isLiveBest: !!p.live && isCurrentBest,
+    }));
+
+    // ── Area fill ─────────────────────────────────────
+    const polyPoints = pts.length > 1
+        ? `${pts.map(p => `${p.x},${p.y}`).join(' ')} ${pts.at(-1).x},${padT + cH} ${pts[0].x},${padT + cH}`
+        : '';
+
+    // ── Line path ─────────────────────────────────────
+    const linePath = pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x},${p.y}`).join(' ');
+
+    // ── Dots + labels ─────────────────────────────────
+    const nodes = pts.map(p => {
+        const color = p.isLiveBest ? '#ff9f0a' : p.isLive ? 'rgba(52,199,89,0.5)' : p.isBest ? '#ff9f0a' : '#34c759';
+        const r     = p.isBest || p.isLiveBest ? 6 : 5;
+        const halo  = p.isBest
+            ? `<circle cx="${p.x}" cy="${p.y}" r="${r + 5}" fill="rgba(255,159,10,0.12)"/>`
+            : `<circle cx="${p.x}" cy="${p.y}" r="${r + 5}" fill="rgba(52,199,89,0.08)"/>`;
+        return `
+            ${halo}
+            <circle cx="${p.x}" cy="${p.y}" r="${r}"
+                fill="white" stroke="${color}" stroke-width="2.5"/>
+            <text x="${p.x}" y="${p.y - 11}" text-anchor="middle"
+                font-size="11" font-weight="700" fill="${color}"
+                font-family="-apple-system,sans-serif">${p.val}</text>
+            <text x="${p.x}" y="${padT + cH + 16}" text-anchor="middle"
+                font-size="10" fill="rgba(134,134,139,0.9)"
+                font-family="-apple-system,sans-serif">${p.label}</text>`;
+    }).join('');
+
+    // Arrow enable states
+    const canGoLeft  = chartPage > 0;
+    const canGoRight = chartPage < maxPage;
+    const hasNav     = points.length > getChartWindow();
+
+    // Left arrow drawn in the Y axis SVG — same vertical position as the "0" label
+    const zeroLabelY = padT + cH + 18; // matches y of the 0 label text
+    yAxisSvg.innerHTML += hasNav ? `
+        <text x="22" y="${zeroLabelY}" text-anchor="end" font-size="18"
+            font-family="-apple-system,sans-serif"
+            fill="${canGoLeft ? '#34c759' : 'rgba(134,134,139,0.25)'}"
+            style="cursor:${canGoLeft ? 'pointer' : 'default'}"
+            onclick="${canGoLeft ? 'chartNav(-1)' : ''}">&#9664;</text>` : '';
+
+    // Right arrow inside chartInner, just past the last data point
+    const lastPtX = pts.length > 0 ? pts[pts.length - 1].x : VW - padX;
+    const arrowsSVG = hasNav ? `
+        <text x="${lastPtX + 18}" y="${zeroLabelY}" font-size="18"
+            font-family="-apple-system,sans-serif"
+            fill="${canGoRight ? '#34c759' : 'rgba(134,134,139,0.25)'}"
+            style="cursor:${canGoRight ? 'pointer' : 'default'}"
+            onclick="${canGoRight ? 'chartNav(1)' : ''}">&#9654;</text>` : '';
+
+    // ── Render ────────────────────────────────────────
+    document.getElementById('chartInner').setAttribute('viewBox', `0 0 ${VW} ${H}`);
+    document.getElementById('chartInner').innerHTML = `
+        <defs>
+            <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%"   stop-color="#34c759" stop-opacity="0.15"/>
+                <stop offset="100%" stop-color="#34c759" stop-opacity="0"/>
+            </linearGradient>
+        </defs>
+        ${gridLines}
+        ${pts.length > 1 ? `<polygon points="${polyPoints}" fill="url(#areaGrad)"/>` : ''}
+        ${pts.length > 1 ? `<path d="${linePath}" fill="none" stroke="#34c759"
+            stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>` : ''}
+        ${nodes}
+        ${arrowsSVG}`;
+}
+
+
+// ════════════════════════════════════════════════════════
+//  TOAST  — brief motivational message after a success
+// ════════════════════════════════════════════════════════
+
+const TOAST_MESSAGES = [
+    '💪 Another day won. You\'re unstoppable.',
+    '🔥 Streak alive! Keep the fire burning.',
+    '✨ One more brick in the wall of discipline.',
+    '🌱 Small wins compound into big change.',
+    '⚡ You chose strength today. Own it.',
+    '🎯 Locked in. One day at a time.',
+    '🏆 Champions are built on days like this.',
+    '🌟 Discipline is freedom — and you just earned some.',
+    '💎 Hard days will come. Today wasn\'t one. Good.',
+    '🙌 Done for the day. Rest with pride.',
+    '🚀 Momentum building. Don\'t stop now.',
+    '🧠 Your future self is thanking you.',
+    '🌊 Steady. Strong. Unbroken.',
+    '✅ Today\'s battle: yours. Keep going.',
+    '🦁 Resilience looks good on you.',
+    '🌄 Every sunrise, a new chance. You took it.',
+    '⭐ You showed up. That\'s everything.',
+    '🔑 Consistency is the key. You turned it today.',
+    '🛡️ Another day, another temptation beaten.',
+    '🌿 Growth is quiet. But it\'s happening.',
+];
+
+let toastTimer = null;
+
+function showToast(streak, customMsg) {
+    const toast = document.getElementById('toast');
+    const msg   = customMsg || TOAST_MESSAGES[Math.floor(Math.random() * TOAST_MESSAGES.length)];
+    const sub   = streak > 1 ? `<div style="font-size:12px;opacity:0.65;margin-top:4px">Day ${streak} streak 🔥</div>` : '';
+    toast.innerHTML = msg + sub;
+
+    if (toastTimer) clearTimeout(toastTimer);
+    toast.classList.remove('show');
+    void toast.offsetWidth; // force reflow so animation restarts
+    toast.classList.add('show');
+    toastTimer = setTimeout(() => toast.classList.remove('show'), 3200);
+}
+
+
+// ════════════════════════════════════════════════════════
+//  CELEBRATIONS  — popup + confetti
+// ════════════════════════════════════════════════════════
+
+// Streak milestone data (keyed by streak day)
+const STREAK_MILESTONES = {
+    1:   { emoji: '⚡', stage: 'FIRST STEP',   title: 'Day 1 Done.',              message: 'First step taken. Your first target is 75 strong days. The journey has begun.' },
+    3:   { emoji: '🔥', stage: 'EARLY BATTLE', title: '3-Day Streak!',            message: 'Three days of staying strong. The battle is real — and you\'re winning it.' },
+    7:   { emoji: '📅', stage: 'WEEK 1',        title: 'First Full Week!',         message: 'One complete week! The neural pathways are starting to rewire. Keep pushing.' },
+    10:  { emoji: '🌟', stage: 'TEN DAYS',      title: '10 Days Strong!',          message: 'Double digits! Your willpower muscle is visibly growing stronger.' },
+    14:  { emoji: '🌿', stage: 'WEEK 2',        title: 'Two Weeks Down!',          message: 'Fourteen days of discipline. The habit is beginning to take root.' },
+    21:  { emoji: '🌱', stage: 'WEEK 3',        title: 'Three Weeks!',             message: '21 days — the classic milestone where habits start to feel natural.' },
+    30:  { emoji: '💪', stage: 'ONE MONTH',     title: 'One Full Month!',          message: 'A whole month of strength. You\'re building an identity, not just a habit.' },
+    50:  { emoji: '⭐', stage: '50 DAYS',       title: '50-Day Streak!',           message: 'FIFTY days. This is elite territory. You are genuinely changing who you are.' },
+    90:  { emoji: '🔱', stage: '90 DAYS',       title: '90-Day Streak!',           message: 'NINETY DAYS. The community knows this number. You\'ve crossed the line most never reach. This is a new identity.' },
+    100: { emoji: '💯', stage: '100 DAYS',      title: '100-Day Streak!',          message: 'ONE HUNDRED DAYS. This is extraordinary. You\'ve proven this is who you are now.' },
+    150: { emoji: '⚔️',  stage: '150 DAYS',      title: '150-Day Streak!',          message: '150 days of unbroken strength. You are not the same person who started. This is mastery in progress.' },
+    200: { emoji: '🛡️',  stage: '200 DAYS',      title: '200-Day Streak!',          message: 'Two hundred days. Unshaken, unbroken, unstoppable. The Warrior in you is real.' },
+    250: { emoji: '⚡', stage: '250 DAYS',      title: '250-Day Streak!',          message: '250 days of pure discipline. You have built something most people will never experience. Keep going.' },
+    300: { emoji: '💎', stage: '300 DAYS',      title: '300-Day Streak!',          message: 'THREE HUNDRED DAYS. Diamond-grade willpower. You are in the top 0.1% of anyone who has ever attempted this.' },
+    365: { emoji: '👑', stage: 'ONE YEAR',      title: 'One Full Year! 👑',        message: 'A FULL YEAR. 365 days of choosing yourself every single day. You are the King. The crown is yours.' },
+};
+
+// Journey sober-day milestone data (keyed by day count)
+const JOURNEY_MILESTONES = {
+    75:   { emoji: '🌱', stage: 'STRONG',   title: '75 Journey Days!',      message: 'Seventy-five successful days. Your identity is shifting. Next target — 100 strong days.' },
+    100:  { emoji: '🔥', stage: 'STRONG',   title: '100 Journey Days!',     message: 'A century of success. Absolute mental strength. Next target — 150 strong days.' },
+    150:  { emoji: '⚔️',  stage: 'STRONG',   title: '150 Journey Days!',     message: '150 days of winning. You\'re a completely different person now. Next target — 200 strong days.' },
+    200:  { emoji: '🛡️',  stage: 'WARRIOR',  title: '200 Journey Days!',     message: 'Two hundred days of endurance. This is who you truly are. Next target — 300 strong days.' },
+    300:  { emoji: '⚡', stage: 'WARRIOR',  title: '300 Journey Days!',     message: '300 days! You\'ve entered a realm most people never reach. Next target — 400 strong days.' },
+    400:  { emoji: '💎', stage: 'WARRIOR',  title: '400 Journey Days!',     message: '400 days of pure diamond-grade discipline. Unbreakable. Next target — 500 strong days.' },
+    500:  { emoji: '🦁', stage: 'KING',     title: '500 Journey Days!',     message: 'FIVE HUNDRED. You are legendary. Next target — 750 strong days.' },
+    750:  { emoji: '🦅', stage: 'KING',     title: '750 Journey Days!',     message: '750 days. You soar above 99.9% of everyone. Next target — 1000 strong days. The crown awaits.' },
+    1000: { emoji: '👑', stage: 'KING',     title: '1000 Journey Days! 👑', message: 'ONE THOUSAND DAYS. You are the King. There is no next target. You have arrived.' },
+};
+
+// Success rate shown only at journey strong-day milestones
+const JOURNEY_SHOW_RATE = new Set([30, 50, 75, 100, 150, 200, 300, 400, 500, 750, 1000]);
+
+function getSuccessRate() {
+    const totalDays = state.calendarDay - 1; // days elapsed so far
+    if (totalDays < 1) return null;
+    const rate = Math.round((state.score.success / totalDays) * 100);
+    return { rate, success: state.score.success, total: totalDays };
+}
+
+function successRateLine() {
+    const r = getSuccessRate();
+    if (!r) return '';
+    return `\n\n📊 ${r.success} strong days out of ${r.total} — you're at ${r.rate}% success rate. Not perfection. Progress.`;
+}
+
+function triggerStreakMilestone(streak) {
+    if (STREAK_MILESTONES[streak]) {
+        setTimeout(() => showCelebration(STREAK_MILESTONES[streak]), 400);
+    }
+}
+
+function triggerJourneyMilestone(days) {
+    // Day 30 and 50 — show success rate popup only, no full milestone card
+    if (days === 30 || days === 50) {
+        const r = getSuccessRate();
+        if (!r) return;
+        setTimeout(() => showCelebration({
+            emoji:   days === 30 ? '💪' : '⭐',
+            stage:   `${days} JOURNEY DAYS`,
+            title:   `${days} Strong Days!`,
+            message: `${r.success} strong days out of ${r.total} — you're at ${r.rate}% success rate. Not perfection. Progress.`,
+        }), 400);
+        return;
+    }
+    if (JOURNEY_MILESTONES[days]) {
+        const data = { ...JOURNEY_MILESTONES[days] };
+        if (JOURNEY_SHOW_RATE.has(days)) {
+            data.message += successRateLine();
+        }
+        setTimeout(() => showCelebration(data), 400);
+    }
+}
+
+function showCelebration({ emoji, stage, title, message }) {
+    document.getElementById('celebEmoji').textContent   = emoji;
+    document.getElementById('celebStage').textContent   = stage;
+    document.getElementById('celebTitle').textContent   = title;
+    document.getElementById('celebMessage').textContent = message;
+    document.getElementById('celebrationOverlay').classList.add('active');
+    launchConfetti();
+}
+
+function closeCelebration() {
+    document.getElementById('celebrationOverlay').classList.remove('active');
+    stopConfetti();
+    // If user dismissed the urge count popup manually, still launch the timer
+    if (urgePendingTimer) {
+        clearTimeout(urgePendingTimer);
+        urgePendingTimer = null;
+        launchUrgeTimer();
+    }
+}
+
+
+// ════════════════════════════════════════════════════════
+//  CONFETTI
+// ════════════════════════════════════════════════════════
+
+let confettiParticles = [];
+let confettiAnimId    = null;
+
+function launchConfetti() {
+    const canvas = document.getElementById('confettiCanvas');
+    canvas.width  = window.innerWidth;
+    canvas.height = window.innerHeight;
+    const ctx     = canvas.getContext('2d');
+    const COLORS  = ['#34c759','#ff9f0a','#007aff','#ff453a','#bf5af2','#ffd60a','#30d158'];
+
+    // Cancel any running animation BEFORE resetting particles
+    if (confettiAnimId) {
+        cancelAnimationFrame(confettiAnimId);
+        confettiAnimId = null;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+
+    confettiParticles = Array.from({ length: 120 }, () => ({
+        x:            Math.random() * canvas.width,
+        y:            Math.random() * canvas.height * -1,
+        r:            Math.random() * 8 + 4,
+        color:        COLORS[Math.floor(Math.random() * COLORS.length)],
+        tiltAngle:    0,
+        tiltAngleInc: (Math.random() * 0.07 + 0.05) * (Math.random() < 0.5 ? 1 : -1),
+        vx:           Math.random() * 2 - 1,
+        vy:           Math.random() * 3 + 2,
+        alpha:        1,
+    }));
+
+    let frame = 0;
+
+    function drawFrame() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        frame++;
+
+        confettiParticles.forEach(p => {
+            p.tiltAngle += p.tiltAngleInc;
+            p.y += p.vy;
+            p.x += p.vx;
+            if (frame > 120) p.alpha -= 0.012;
+
+            ctx.save();
+            ctx.globalAlpha = Math.max(0, p.alpha);
+            ctx.beginPath();
+            ctx.lineWidth   = p.r;
+            ctx.strokeStyle = p.color;
+            ctx.moveTo(p.x + Math.sin(p.tiltAngle) * 12 + p.r / 4, p.y);
+            ctx.lineTo(p.x + Math.sin(p.tiltAngle) * 12, p.y + Math.sin(p.tiltAngle) * 12 + p.r / 4);
+            ctx.stroke();
+            ctx.restore();
+        });
+
+        if (frame < 240 && confettiParticles.some(p => p.alpha > 0)) {
+            confettiAnimId = requestAnimationFrame(drawFrame);
+        } else {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+    }
+
+    drawFrame();
+}
+
+function stopConfetti() {
+    if (confettiAnimId) cancelAnimationFrame(confettiAnimId);
+    const canvas = document.getElementById('confettiCanvas');
+    canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+}
+
+
+// ════════════════════════════════════════════════════════
+//  FEATURE 1: URGE SURFING TIMER
+//  A 15-minute countdown with a breathing cycle animation.
+//  Urges typically peak and fade within 15 minutes.
+// ════════════════════════════════════════════════════════
+
+const URGE_DURATION_SECS = 15 * 60; // 15 minutes
+let urgeSecsLeft  = URGE_DURATION_SECS;
+let urgeInterval  = null;
+let breathInterval = null;
+
+let urgePendingTimer = null;
+
+function startUrgeSurf() {
+    // Log this urge with current hour for pattern analysis
+    if (!state.urgeLog) state.urgeLog = [];
+    state.urgeLog.push({ hour: new Date().getHours(), date: todayKey() });
+    saveToStorage(state);
+
+    const count = state.urgesSurfed || 0;
+    if (count > 0) {
+        showCelebration({
+            emoji:   '🌊',
+            stage:   'URGE SURFER',
+            title:   `${count} Urge${count !== 1 ? 's' : ''} Defeated`,
+            message: `You've beaten ${count} urge${count !== 1 ? 's' : ''} before. You know how this ends — it passes. Let's go.`,
+        });
+        // Auto-launch timer after popup — cancelled if user dismisses early
+        if (urgePendingTimer) clearTimeout(urgePendingTimer);
+        urgePendingTimer = setTimeout(() => {
+            urgePendingTimer = null;
+            closeCelebration();
+            launchUrgeTimer();
+        }, 2200);
+    } else {
+        launchUrgeTimer();
+    }
+}
+
+function launchUrgeTimer() {
+    // Clear any existing intervals before starting fresh
+    clearInterval(urgeInterval);
+    clearInterval(breathInterval);
+
+    urgeSecsLeft = URGE_DURATION_SECS;
+    updateUrgeCountdown();
+    document.getElementById('urgeOverlay').classList.add('active');
+    startBreathing();
+
+    urgeInterval = setInterval(() => {
+        urgeSecsLeft--;
+        updateUrgeCountdown();
+        if (urgeSecsLeft <= 0) {
+            clearInterval(urgeInterval);
+            document.getElementById('urgePhase').textContent = '✅ You made it through the urge!';
+        }
+    }, 1000);
+}
+
+function updateUrgeCountdown() {
+    const m = Math.floor(urgeSecsLeft / 60);
+    const s = urgeSecsLeft % 60;
+    document.getElementById('urgeCountdown').textContent =
+        `${m}:${String(s).padStart(2, '0')}`;
+}
+
+function startBreathing() {
+    // 4-second inhale, 4-second hold, 4-second exhale cycle
+    const ring    = document.getElementById('breathRing');
+    const label   = document.getElementById('breathLabel');
+    const phase   = document.getElementById('urgePhase');
+    const CIRCUMFERENCE = 339; // 2 * π * 54
+
+    const PHASES = [
+        { label: 'Breathe in',  phase: 'Inhale slowly for 4 seconds…',  offset: 0,            duration: 4 },
+        { label: 'Hold',        phase: 'Hold… stay with the feeling…',   offset: 0,            duration: 4 },
+        { label: 'Breathe out', phase: 'Exhale slowly for 4 seconds…',   offset: CIRCUMFERENCE, duration: 4 },
+        { label: 'Rest',        phase: 'Rest for 2 seconds…',            offset: CIRCUMFERENCE, duration: 2 },
+    ];
+
+    let phaseIndex = 0;
+
+    function runPhase() {
+        const p = PHASES[phaseIndex];
+        label.textContent = p.label;
+        phase.textContent = p.phase;
+        ring.style.transition = `stroke-dashoffset ${p.duration}s ease-in-out`;
+        ring.style.strokeDashoffset = p.offset;
+        phaseIndex = (phaseIndex + 1) % PHASES.length;
+    }
+
+    runPhase();
+    // Sum of all phase durations = 14s cycle
+    breathInterval = setInterval(runPhase, 3500);
+}
+
+function urgeSurvived() {
+    closeUrge();
+    state.urgesSurfed = (state.urgesSurfed || 0) + 1;
+    saveToStorage(state);
+    showToast(state.currentStreak, `🌊 Urge surfed! That's ${state.urgesSurfed} total. Pure strength.`);
+}
+
+function closeUrge() {
+    clearInterval(urgeInterval);
+    clearInterval(breathInterval);
+    document.getElementById('urgeOverlay').classList.remove('active');
+}
+
+
+// ════════════════════════════════════════════════════════
+//  FEATURE 3: JOURNEY COMPARISON CARD
+//  Full-screen summary shown at the end of each journey.
+//  Compares the just-completed journey against the previous one.
+// ════════════════════════════════════════════════════════
+
+/**
+ * Shows the journey comparison card.
+ * @param {object} current  - { attempt, score: {success, failures} }
+ * @param {object|null} prev - previous journey or null if first journey
+ */
+function showJourneyComparison(current, prev) {
+    // Title
+    if (prev) {
+        document.getElementById('compareTitleText').textContent =
+            `Journey ${current.attempt} vs Journey ${prev.attempt}`;
+    } else {
+        document.getElementById('compareTitleText').textContent =
+            `Journey ${current.attempt} Complete`;
+    }
+
+    document.getElementById('compareNextNum').textContent = current.attempt + 1;
+
+    // Build comparison stats
+    const currentBestStreak = Math.max(...(state.currentJourneyStreaks || []), 0);
+    const prevBestStreak    = prev
+        ? Math.max(...((state.pastJourneyStreaks.find(h => h.attempt === prev.attempt)?.streaks) || []), 0)
+        : null;
+
+    const stats = [
+        {
+            label:   'Strong Days',
+            current: current.score.success,
+            prev:    prev?.score.success ?? null,
+        },
+        {
+            label:   'Best Streak',
+            current: currentBestStreak,
+            prev:    prevBestStreak,
+        },
+    ];
+
+    const grid = document.getElementById('compareGrid');
+    grid.innerHTML = stats.map(stat => {
+        const hasComparison = stat.prev !== null;
+        const currentVal    = stat.current;
+        const prevVal       = stat.prev;
+
+        // Direction: better / worse / same
+        let arrowColor = '';
+        let cssClass   = '';
+        if (hasComparison && currentVal !== '—' && prevVal !== '—') {
+            const better = stat.lowerIsBetter
+                ? Number(currentVal) < Number(prevVal)
+                : Number(currentVal) > Number(prevVal);
+            const same   = Number(currentVal) === Number(prevVal);
+            cssClass   = same ? 'same' : better ? '' : 'worse';
+        }
+
+        return `
+            <div class="compare-stat">
+                <div class="compare-stat-label">${stat.label}</div>
+                <div class="compare-stat-values">
+                    ${hasComparison ? `<span class="compare-val-old">${prevVal}</span><span class="compare-arrow">→</span>` : ''}
+                    <span class="compare-val-new ${cssClass}">${currentVal}</span>
+                </div>
+            </div>`;
+    }).join('');
+
+    // Motivational message
+    let message = '';
+    if (!prev) {
+        message = `Your first journey ends here — ${current.score.success} strong days. Every journey after this is you already knowing you can do it.`;
+    } else {
+        const diff = current.score.success - prev.score.success;
+        if (diff > 0) {
+            message = `📈 ${diff} more strong days than last time. You are improving. Each journey you learn yourself better.`;
+        } else if (diff < 0) {
+            message = `This one was harder. That's okay. The fact you're still here means the fight isn't over. Journey ${current.attempt + 1} starts fresh.`;
+        } else {
+            message = `Same score, different battle. You held the line. Now push one step further.`;
+        }
+    }
+    document.getElementById('compareMessage').textContent = message;
+
+    document.getElementById('journeyCompareOverlay').classList.add('active');
+}
+
+function closeCompare() {
+    document.getElementById('journeyCompareOverlay').classList.remove('active');
+}
+
+
+// ════════════════════════════════════════════════════════
+//  MONTHLY GRID
+// ════════════════════════════════════════════════════════
+
+function todayKey() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+// Reads log entry status — handles both old string format and new object format
+function logStatus(entry) {
+    if (!entry) return null;
+    if (typeof entry === 'string') return entry;
+    return entry.status || null;
+}
+
+// Returns calendarDay for a log entry
+function logDay(entry) {
+    if (!entry) return null;
+    if (typeof entry === 'object') return entry.day || null;
+    return null;
+}
+
+function renderMonthGrid() {
+    const grid     = document.getElementById('monthGrid');
+    const subtitle = document.getElementById('monthGridSubtitle');
+    const log      = state.dailyLog || {};
+    const today    = new Date();
+    const year     = today.getFullYear();
+    const month    = today.getMonth();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const firstDayOfWeek = new Date(year, month, 1).getDay(); // 0=Sun
+
+    const monthName = today.toLocaleString('default', { month: 'long' });
+    document.getElementById('monthGridTitle').textContent = monthName;
+
+    // Count strong/slip for subtitle
+    let strongCount = 0, slipCount = 0;
+    for (let d = 1; d <= daysInMonth; d++) {
+        const key = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+        if (logStatus(log[key]) === 'strong') strongCount++;
+        if (logStatus(log[key]) === 'slip') slipCount++;
+    }
+    subtitle.textContent = strongCount > 0 || slipCount > 0
+        ? `${strongCount} strong · ${slipCount} slip${slipCount !== 1 ? 's' : ''}`
+        : '';
+
+    // Day labels row: S M T W T F S
+    const DAY_LABELS = ['S','M','T','W','T','F','S'];
+    let html = DAY_LABELS.map(d =>
+        `<div class="month-day-label">${d}</div>`
+    ).join('');
+
+    // Empty cells before first day
+    for (let i = 0; i < firstDayOfWeek; i++) {
+        html += `<div class="month-cell future"></div>`;
+    }
+
+    // Build date→status lookup from new log format (key: 'day-N', value: {status, date})
+    const dateStatus = {};
+    Object.values(log).forEach(entry => {
+        const dateKey = (typeof entry === 'object') ? entry.date : null;
+        const status  = logStatus(entry);
+        if (dateKey && status) dateStatus[dateKey] = status;
+    });
+
+    // Recount subtitle using dateStatus
+    let strongCount2 = 0, slipCount2 = 0;
+    for (let d = 1; d <= daysInMonth; d++) {
+        const key = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+        if (dateStatus[key] === 'strong') strongCount2++;
+        if (dateStatus[key] === 'slip')   slipCount2++;
+    }
+    subtitle.textContent = strongCount2 > 0 || slipCount2 > 0
+        ? `${strongCount2} strong · ${slipCount2} slip${slipCount2 !== 1 ? 's' : ''}`
+        : 'Your history starts today';
+
+    // Day cells
+    for (let d = 1; d <= daysInMonth; d++) {
+        const key      = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+        const isToday  = d === today.getDate();
+        const isFuture = d > today.getDate();
+        const status   = dateStatus[key];
+
+        let cls = 'month-cell';
+        if (status === 'strong') cls += ' strong';
+        else if (status === 'slip') cls += ' slip';
+        else if (isFuture) cls += ' future';
+        if (isToday) cls += ' today';
+
+        html += `<div class="${cls}">${d}</div>`;
+    }
+
+    grid.innerHTML = html;
+}
+
+
+// ════════════════════════════════════════════════════════
+//  DAY REFRESH
+//  On every app open, check if a new real-world day has
+//  passed. If so, auto-advance days (unlogged = success).
+// ════════════════════════════════════════════════════════
+
+function checkNewDay() {
+    const today = todayKey();
+
+    // Already checked today — skip (prevents multiple event listeners firing)
+    if (state.lastCheckedDate === today) return;
+    state.lastCheckedDate = today;
+
+    // First open ever — just record today
+    if (!state.lastOpenedDate) {
+        state.lastOpenedDate = today;
+        saveToStorage(state);
+        return;
+    }
+
+    // Same day — nothing to do
+    if (state.lastOpenedDate === today) return;
+
+    const last     = new Date(state.lastOpenedDate);
+    const now      = new Date(today);
+    const diffDays = Math.round((now - last) / (1000 * 60 * 60 * 24));
+
+    // Exactly 1 day missed and yesterday was unlogged — show reminder
+    if (diffDays === 1 && state.todayStatus === 'none') {
+        document.getElementById('reminderOverlay').classList.add('active');
+        return; // wait for user to respond before advancing
+    }
+
+    // Multiple days missed — auto-advance silently (each counts as success)
+    for (let i = 0; i < diffDays; i++) {
+        if (state.todayStatus === 'none') {
+            state.score.success++;
+            state.currentStreak++;
+            if (state.currentStreak > state.longestStreak) {
+                state.longestStreak = state.currentStreak;
+            }
+            // Log as strong in dailyLog so monthly grid turns green
+            const missedDate = new Date(last);
+            missedDate.setDate(missedDate.getDate() + i);
+            const missedKey = `${missedDate.getFullYear()}-${String(missedDate.getMonth()+1).padStart(2,'0')}-${String(missedDate.getDate()).padStart(2,'0')}`;
+            state.dailyLog[`day-${state.calendarDay}`] = { status: 'strong', day: state.calendarDay, date: missedKey };
+            checkJourneyMilestone(state.score.success);
+            updateBestJourney();
+        }
+        if (state.score.failures >= 10) { endJourney(); break; }
+        state.calendarDay++;
+        state.todayStatus    = 'none';
+        state.todayFailCount = 0;
+    }
+
+    state.lastOpenedDate = today;
+    chartPage = -1;
+    saveToStorage(state);
+    renderAll();
+}
+
+
+function logYesterday(result) {
+    document.getElementById('reminderOverlay').classList.remove('active');
+    const yesterdayCalDay = state.calendarDay; // current calendarDay is yesterday before we advance
+
+    if (result === 'strong') {
+        state.score.success++;
+        state.currentStreak++;
+        if (state.currentStreak > state.longestStreak) state.longestStreak = state.currentStreak;
+        checkJourneyMilestone(state.score.success);
+        updateBestJourney();
+        state.dailyLog[`day-${yesterdayCalDay}`] = { status: 'strong', day: yesterdayCalDay, date: todayKey() };
+    } else {
+        state.currentJourneyStreaks.push(state.currentStreak);
+        state.score.failures++;
+        state.currentStreak    = 0;
+        state.recordCelebrated = false;
+        state.dailyLog[`day-${yesterdayCalDay}`] = { status: 'slip', day: yesterdayCalDay, date: todayKey() };
+    }
+
+    if (state.score.failures >= 10) { endJourney(); return; }
+    state.calendarDay++;
+    state.todayStatus    = 'none';
+    state.todayFailCount = 0;
+    state.lastOpenedDate = todayKey();
+    chartPage = -1;
+    saveToStorage(state);
+    renderAll();
+}
+// ════════════════════════════════════════════════════════
+//  BRAIN RECOVERY CARD
+//  Shows current neurological phase based on streak length.
+// ════════════════════════════════════════════════════════
+
+const BRAIN_PHASES = [
+    {
+        from: 0,   to: 3,
+        emoji: '⚡', phase: 'Withdrawal',
+        desc: 'Your dopamine receptors are recalibrating. Irritability, restlessness and flatness are normal — your brain is adjusting to life without supernormal stimulation.',
+    },
+    {
+        from: 3,   to: 14,
+        emoji: '🌫️', phase: 'Flatline',
+        desc: 'Libido drops, motivation feels low. This is your brain downregulating dopamine sensitivity — painful but a clear sign of healing. Hold the line.',
+    },
+    {
+        from: 14,  to: 30,
+        emoji: '🌱', phase: 'Early Rewiring',
+        desc: 'Prefrontal cortex activity is increasing. Impulse control improves, sleep deepens, social anxiety reduces. The fog is lifting.',
+    },
+    {
+        from: 30,  to: 60,
+        emoji: '⚗️', phase: 'Neuroplasticity Window',
+        desc: 'Dopamine D2 receptors are recovering. Grey matter is rebuilding. Motivation and mood stabilise. This is where real change takes root.',
+    },
+    {
+        from: 60,  to: 90,
+        emoji: '🔥', phase: 'Identity Shift',
+        desc: 'Measurable prefrontal cortex improvement. Better decisions, emotional regulation, deeper empathy. New neural pathways are solidifying.',
+    },
+    {
+        from: 90,  to: 180,
+        emoji: '💎', phase: 'Consolidation',
+        desc: 'Dopamine system largely recovered. Urges are weaker and less frequent. Relationships deepen. You are not the same person who started.',
+    },
+    {
+        from: 180, to: 365,
+        emoji: '🦅', phase: 'Long-term Stability',
+        desc: 'Brain function normalised. What once required willpower now comes from identity. This is who you are.',
+    },
+    {
+        from: 365, to: Infinity,
+        emoji: '👑', phase: 'Mastery',
+        desc: 'A year of freedom. Your brain has fully rewired. You have achieved what most people never attempt. This is a permanent transformation.',
+    },
+];
+
+function renderBrainCard() {
+    const streak = state.currentStreak;
+    const list   = document.getElementById('scienceList');
+    if (!list) return;
+
+    list.innerHTML = BRAIN_PHASES.map((phase, idx) => {
+        const isCurrent   = streak >= phase.from && streak < phase.to;
+        const isCompleted = streak >= phase.to;
+
+        const toLabel  = phase.to === Infinity ? '365+' : phase.to;
+        const dayRange = `Day ${phase.from}–${toLabel}`;
+
+        // Progress within current phase
+        const phaseLen = phase.to === Infinity ? 365 : phase.to - phase.from;
+        const daysIn   = streak - phase.from;
+        const pct      = Math.min(100, Math.round((daysIn / phaseLen) * 100));
+        const daysLeft = phase.to === Infinity ? null : phase.to - streak;
+
+        let cls = 'science-item';
+        if (isCurrent)   cls += ' current';
+        if (isCompleted) cls += ' completed';
+        if (!isCurrent && !isCompleted) cls += ' future';
+
+        const badge = isCurrent
+            ? `<span class="science-here-badge">You are here</span>`
+            : isCompleted
+                ? `<span class="science-days-range">✓ Done</span>`
+                : `<span class="science-days-range">${dayRange}</span>`;
+
+        const progressBar = isCurrent ? `
+            <div class="science-progress-track">
+                <div class="science-progress-fill" style="width:${pct}%"></div>
+            </div>
+            <div class="science-progress-label">${daysLeft
+                ? `${daysLeft} day${daysLeft !== 1 ? 's' : ''} to next phase`
+                : 'Final stage reached'}</div>` : '';
+
+        // Current phase: full card. Others: collapsed, tap to expand.
+        if (isCurrent) {
+            return `
+                <div class="${cls}">
+                    <div class="science-item-header">
+                        <div class="science-item-left">
+                            <span class="science-emoji">${phase.emoji}</span>
+                            <span class="science-phase-name">${phase.phase}</span>
+                        </div>
+                        ${badge}
+                    </div>
+                    <div class="science-desc">${phase.desc}</div>
+                    ${progressBar}
+                </div>`;
+        }
+
+        // Collapsed — just one row, tap to expand
+        return `
+            <div class="${cls} science-collapsed" onclick="toggleSciencePhase(${idx})">
+                <div class="science-item-header" style="margin-bottom:0">
+                    <div class="science-item-left">
+                        <span class="science-emoji">${phase.emoji}</span>
+                        <span class="science-phase-name">${phase.phase}</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:6px">
+                        ${badge}
+                        <span class="science-chevron" id="chevron-${idx}">›</span>
+                    </div>
+                </div>
+                <div class="science-desc science-expandable" id="expand-${idx}" style="display:none;margin-top:8px">${phase.desc}</div>
+            </div>`;
+    }).join('');
+}
+
+function toggleSciencePhase(idx) {
+    const desc    = document.getElementById(`expand-${idx}`);
+    const chevron = document.getElementById(`chevron-${idx}`);
+    if (!desc) return;
+    const open = desc.style.display === 'none';
+    desc.style.display    = open ? 'block' : 'none';
+    chevron.style.transform = open ? 'rotate(90deg)' : '';
+    chevron.style.transition = 'transform 0.2s';
+}
+
+
+// ════════════════════════════════════════════════════════
+//  DAILY KNOWLEDGE CARD
+//  One fact per day, rotates from a pool of 20.
+//  Changes at midnight — same fact all day.
+// ════════════════════════════════════════════════════════
+
+const KNOWLEDGE_FACTS = [
+    { emoji: '🧠', headline: 'Porn triggers the same dopamine as cocaine.', body: 'That\'s why stopping feels impossible — and why every strong day literally rewires your reward circuit.' },
+    { emoji: '⚡', headline: 'Urges last 10–20 minutes on average.', body: 'Every urge you survive without acting on weakens the neural pathway that created it. Time is your weapon.' },
+    { emoji: '💪', headline: 'Willpower is a muscle — it grows with use.', body: 'Each time you resist, your prefrontal cortex gets stronger. You are literally building discipline.' },
+    { emoji: '🌱', headline: 'The brain starts rewiring within 2 weeks.', body: 'Prefrontal cortex activity increases, impulse control improves, and brain fog begins to lift.' },
+    { emoji: '🔥', headline: 'Dopamine D2 receptors recover by Day 30–60.', body: 'These are the receptors that let you feel pleasure from everyday life. They come back. So does joy.' },
+    { emoji: '🎯', headline: 'Your streak is proof, not just a number.', body: 'Every day on that counter is a decision you made under pressure. Nobody can take that from you.' },
+    { emoji: '😴', headline: 'Sleep quality improves significantly after 2 weeks.', body: 'Pornography disrupts REM sleep cycles. Abstaining restores deeper, more restorative sleep.' },
+    { emoji: '👥', headline: 'Social anxiety reduces as dopamine rebalances.', body: 'Hypersexualisation of social situations fades. Real conversations feel easier and more genuine.' },
+    { emoji: '⚗️', headline: 'Grey matter volume recovers with abstinence.', body: 'Brain imaging studies show measurable grey matter restoration in regions controlling behaviour and emotion.' },
+    { emoji: '🏆', headline: 'Identity change is more powerful than willpower.', body: 'The question isn\'t "can I resist today" — it\'s "who am I?" Someone who doesn\'t do this anymore doesn\'t need willpower.' },
+    { emoji: '🌊', headline: 'Urge surfing works because urges are waves.', body: 'They peak, they crest, they fall. No urge has ever lasted forever. You just have to outlast it.' },
+    { emoji: '💡', headline: 'Boredom is the #1 trigger — not stress.', body: 'Research shows idle time drives more relapses than emotional pain. Filling your time deliberately is a recovery strategy.' },
+    { emoji: '🔄', headline: 'Relapse does not erase progress.', body: 'Neural pathways you\'ve built don\'t disappear. Every day of strength is permanently wired in, even after a slip.' },
+    { emoji: '📈', headline: 'Recovery is not linear — and that\'s normal.', body: 'The average person attempting recovery makes multiple attempts. Each one teaches you something. You are on the right path.' },
+    { emoji: '🧬', headline: 'Testosterone levels normalise after 90 days.', body: 'Studies report increased energy, drive, and confidence as the hormonal system rebalances with abstinence.' },
+    { emoji: '🎭', headline: 'Porn creates unrealistic expectations — recovery restores reality.', body: 'Real intimacy, real emotion, and real connection become more accessible as the brain resets.' },
+    { emoji: '⏰', headline: 'The 72-hour window is the hardest.', body: 'The first 3 days have the strongest withdrawal. If you can get past Day 3, your chances of continuing improve dramatically.' },
+    { emoji: '🛡️', headline: 'Avoiding triggers is not weakness — it\'s strategy.', body: 'Elite athletes control their environment. So do people in serious recovery. Knowing your triggers and preparing for them is strength.' },
+    { emoji: '🌙', headline: 'Late night is the highest risk window for most people.', body: 'Fatigue lowers prefrontal control. A simple rule — phone away at 10pm — prevents more relapses than any amount of willpower.' },
+    { emoji: '🦁', headline: 'Every journey you start is not failure — it\'s data.', body: 'You learn your triggers, your patterns, your weak points. Journey 3 is smarter than Journey 1. You are not starting over. You are going deeper.' },
+];
+
+function renderLifetimeStats() {
+    // Total journeys = current attempt number
+    const journeys = state.attempt;
+
+    // Total strong days = current journey strong + all past journeys
+    const pastStrong = state.completedJourneys.reduce((sum, j) => sum + (j.score.success || 0), 0);
+    const totalStrong = pastStrong + state.score.success;
+
+    // Total relapses = current journey failures + all past journeys failures
+    const pastRelapses = state.completedJourneys.reduce((sum, j) => sum + (j.score.failures || 0), 0);
+    const totalRelapses = pastRelapses + state.score.failures;
+
+    document.getElementById('lifetimeJourneys').textContent = journeys;
+    document.getElementById('lifetimeStrong').textContent   = totalStrong;
+    document.getElementById('lifetimeRelapses').textContent = totalRelapses;
+}
+
+function renderKnowledgeCard() {
+    // Rotate by calendarDay — changes every day user advances, works with test button
+    const fact = KNOWLEDGE_FACTS[(state.calendarDay - 1) % KNOWLEDGE_FACTS.length];
+
+    document.getElementById('knowledgeEmoji').textContent    = fact.emoji;
+    document.getElementById('knowledgeHeadline').textContent = fact.headline;
+    document.getElementById('knowledgeBody').textContent     = fact.body;
+}
+
+
+
+
+//  ONBOARDING
+//  Shows 3 slides on first launch only.
+//  A flag in localStorage prevents it showing again.
+// ════════════════════════════════════════════════════════
+
+const TOTAL_SLIDES = 5;
+let currentSlide = 0;
+
+function checkOnboarding() {
+    const done = safeGet('onboardingComplete');
+    if (!done) {
+        document.getElementById('onboardingOverlay').style.display = 'flex';
+    } else {
+        document.getElementById('onboardingOverlay').style.display = 'none';
+    }
+}
+
+function onboardingNext() {
+    if (currentSlide < TOTAL_SLIDES - 1) {
+        // Go to next slide
+        document.getElementById(`slide-${currentSlide}`).classList.remove('active');
+        document.getElementById(`dot-${currentSlide}`).classList.remove('active');
+        currentSlide++;
+        document.getElementById(`slide-${currentSlide}`).classList.add('active');
+        document.getElementById(`dot-${currentSlide}`).classList.add('active');
+
+        // Last slide — change button to "Let's Begin"
+        if (currentSlide === TOTAL_SLIDES - 1) {
+            document.getElementById('onboardingBtn').textContent = "Let's Begin 💪";
+        }
+    } else {
+        completeOnboarding();
+    }
+}
+
+function completeOnboarding() {
+    safeSet('onboardingComplete', 'true');
+    const overlay = document.getElementById('onboardingOverlay');
+    overlay.classList.add('hidden');
+    setTimeout(() => overlay.style.display = 'none', 400);
+}
+
+
+// ════════════════════════════════════════════════════════
+//  START
+// ════════════════════════════════════════════════════════
+
+checkOnboarding();
+init();
+checkNewDay();
+
+// Dismiss load screen after 0.4s
+setTimeout(() => {
+    const ls = document.getElementById('loadScreen');
+    if (ls) {
+        ls.style.opacity = '0';
+        setTimeout(() => ls.style.display = 'none', 300);
+    }
+}, 400);
+
+// Re-check day when user returns to app from background
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') checkNewDay();
+});
+
+// iOS Safari PWA — fires when restored from cache (bfcache)
+window.addEventListener('pageshow', (e) => {
+    if (e.persisted) checkNewDay();
+});
+
+// iOS Safari PWA — fires on focus when returning from background
+window.addEventListener('focus', () => {
+    checkNewDay();
+});
+
+// iOS Safari PWA — fires when app becomes active again
+document.addEventListener('resume', () => {
+    checkNewDay();
+});
+</script>
+</body>
+</html>
