@@ -304,22 +304,6 @@
             background: linear-gradient(180deg, #9ca3af, #6b7280);
             box-shadow: none;
         }
-
-        .btn-test {
-            grid-column: 1 / -1;
-            background: transparent;
-            color: var(--text-muted);
-            border: 1px dashed var(--border);
-            font-size: 13px;
-            padding: 10px;
-            border-radius: 12px;
-            font-weight: 500;
-            cursor: pointer;
-            font-family: inherit;
-            box-shadow: none;
-            opacity: 0.6;
-        }
-
         .btn-reset {
             grid-column: 1 / -1;
             background: transparent;
@@ -1701,9 +1685,21 @@ if ('serviceWorker' in navigator) {
 
 
 // ════════════════════════════════════════════════════════
+//  FIREBASE CONFIG (ready for V2 integration)
+// ════════════════════════════════════════════════════════
+const firebaseConfig = {
+    apiKey:            "AIzaSyBXUAxK35kmMEP9DAhnHlPeSoeTf6UznZU",
+    authDomain:        "king-mvp-7aa81.firebaseapp.com",
+    projectId:         "king-mvp-7aa81",
+    storageBucket:     "king-mvp-7aa81.firebasestorage.app",
+    messagingSenderId: "950917699218",
+    appId:             "1:950917699218:web:e1a1d95f0400384558784b"
+};
+
+
+// ════════════════════════════════════════════════════════
 //  STORAGE LAYER
-//  Swap these two functions for Firebase calls tomorrow —
-//  the rest of the code doesn't need to change.
+//  localStorage only (MVP). Firebase integration in V2.
 // ════════════════════════════════════════════════════════
 
 const STORAGE_KEY = 'habitTracker_v3';
@@ -1717,12 +1713,10 @@ function loadFromStorage() {
     }
 }
 
-function saveToStorage(state) {
+function saveToStorage(stateObj) {
     try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    } catch (e) {
-        // Storage unavailable (e.g. WhatsApp webview) — runs in memory only
-    }
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(stateObj));
+    } catch (e) {}
 }
 
 // In-memory fallback for restricted webviews
@@ -1838,7 +1832,6 @@ function switchChartMode(mode) {
 function init() {
     const saved = loadFromStorage();
     if (saved) {
-        // Merge saved data with defaults so new fields added later still exist
         state = { ...getDefaultState(), ...saved };
 
         // Back-compat: old key names → new names
@@ -1857,7 +1850,6 @@ function init() {
         if (saved.currentAttemptStreaks !== undefined) {
             state.currentJourneyStreaks = saved.currentAttemptStreaks;
         }
-        // Nested objects need explicit merge
         state.journeyMilestones = { ...getDefaultState().journeyMilestones, ...(saved.journeyMilestones || {}) };
     }
     renderAll();
@@ -3004,12 +2996,6 @@ function logStatus(entry) {
     return entry.status || null;
 }
 
-// Returns calendarDay for a log entry
-function logDay(entry) {
-    if (!entry) return null;
-    if (typeof entry === 'object') return entry.day || null;
-    return null;
-}
 
 function monthNav(dir) {
     monthOffset += dir;
@@ -3457,7 +3443,7 @@ checkOnboarding();
 init();
 checkNewDay();
 
-// Dismiss load screen after 0.4s
+// Dismiss load screen after 0.6s
 setTimeout(() => {
     const ls = document.getElementById('loadScreen');
     if (ls) {
