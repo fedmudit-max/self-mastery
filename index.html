@@ -688,6 +688,25 @@
         }
 
         /* ── MONTHLY GRID ── */
+        .month-nav-btn {
+            background: none;
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            width: 32px;
+            height: 32px;
+            font-size: 18px;
+            color: var(--text-muted);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-family: inherit;
+            transition: all 0.15s;
+        }
+
+        .month-nav-btn:hover { background: var(--bg); color: var(--text); }
+        .month-nav-btn:disabled { opacity: 0.25; cursor: not-allowed; }
         .month-grid {
             display: grid;
             grid-template-columns: repeat(7, 1fr);
@@ -1345,7 +1364,6 @@
             <button class="btn-success" id="successBtn" onclick="handleSuccess()">✓ I STAYED STRONG</button>
             <button class="btn-danger"  id="failBtn"    onclick="showModal('fail')">✕ I Slipped</button>
             <button class="btn-urge" onclick="startUrgeSurf()">🌊 I Feel the Urge</button>
-            <button class="btn-test" onclick="testNextDay()">next day (test)</button>
         </div>
     </div>
 
@@ -1452,8 +1470,12 @@
     <!-- ═══ MONTHLY GRID CARD ═════════════════════════════ -->
     <div class="card">
         <div class="chart-header">
-            <span class="chart-title" id="monthGridTitle">This Month</span>
-            <span class="chart-subtitle" id="monthGridSubtitle"></span>
+            <button class="month-nav-btn" onclick="monthNav(-1)">‹</button>
+            <div style="text-align:center;">
+                <span class="chart-title" id="monthGridTitle">This Month</span><br>
+                <span class="chart-subtitle" id="monthGridSubtitle"></span>
+            </div>
+            <button class="month-nav-btn" id="monthNavNext" onclick="monthNav(1)">›</button>
         </div>
         <div class="month-grid" id="monthGrid"></div>
         <div class="month-legend">
@@ -1537,8 +1559,8 @@
         <!-- Slide 2 — The problem -->
         <div class="onboarding-slide" id="slide-1">
             <div class="onboarding-emoji">💔</div>
-            <div class="onboarding-title">The Old Way Fails</div>
-            <div class="onboarding-body">One slip. Streak gone. Start over from zero. That's why most people quit — not because they're weak, but because the system is broken.</div>
+            <div class="onboarding-title">Fail Forward, Not Backward</div>
+            <div class="onboarding-body">Most apps reset everything on one slip. King doesn't. A slip is not the end — it's data. You learn, you adjust, you keep moving forward.</div>
         </div>
 
         <!-- Slide 3 — The journey system -->
@@ -1797,6 +1819,7 @@ let pendingAction = null; // tracks what the confirm modal will do
 let currentTab    = 0;    // 0 = Streak, 1 = Journey Milestones
 let chartPage     = -1;   // -1 means "snap to latest on next draw"
 let chartMode     = 'streaks'; // 'streaks' | 'journeys'
+let monthOffset   = 0;    // 0 = current month, -1 = last month etc.
 
 function switchChartMode(mode) {
     chartMode = mode;
@@ -1915,14 +1938,7 @@ function resetAll() {
     renderAll();
 }
 
-function testNextDay() {
-    if (state.score.failures >= 10) { endJourney(); return; }
-    state.calendarDay++;
-    state.todayStatus    = 'none';
-    state.todayFailCount = 0;
-    chartPage = -1;
-    saveAndRender();
-}
+
 
 function recordSuccess() {
     state.score.success++;
@@ -2995,42 +3011,71 @@ function logDay(entry) {
     return null;
 }
 
+function monthNav(dir) {
+    monthOffset += dir;
+    if (monthOffset > 0) monthOffset = 0;
+
+    // Don't go before the month the journey started
+    // Find earliest date in dailyLog
+    const log   = state.dailyLog || {};
+    const dates = Object.values(log)
+        .map(e => (typeof e === 'object') ? e.date : null)
+        .filter(Boolean)
+        .sort();
+
+    if (dates.length > 0) {
+        const earliest   = new Date(dates[0]);
+        const today      = new Date();
+        const minOffset  = (earliest.getFullYear() - today.getFullYear()) * 12
+                         + (earliest.getMonth() - today.getMonth());
+        if (monthOffset < minOffset) monthOffset = minOffset;
+    }
+
+    renderMonthGrid();
+}
+
 function renderMonthGrid() {
     const grid     = document.getElementById('monthGrid');
     const subtitle = document.getElementById('monthGridSubtitle');
     const log      = state.dailyLog || {};
-    const today    = new Date();
-    const year     = today.getFullYear();
-    const month    = today.getMonth();
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const firstDayOfWeek = new Date(year, month, 1).getDay(); // 0=Sun
 
-    const monthName = today.toLocaleString('default', { month: 'long' });
+    // Apply monthOffset to get the target month
+    const ref   = new Date();
+    ref.setDate(1);
+    ref.setMonth(ref.getMonth() + monthOffset);
+
+    const year           = ref.getFullYear();
+    const month          = ref.getMonth();
+    const daysInMonth    = new Date(year, month + 1, 0).getDate();
+    const firstDayOfWeek = new Date(year, month, 1).getDay();
+    const today          = new Date();
+    const isCurrentMonth = year === today.getFullYear() && month === today.getMonth();
+
+    // Month + year label
+    const monthName = ref.toLocaleString('default', { month: 'long', year: 'numeric' });
     document.getElementById('monthGridTitle').textContent = monthName;
 
-    // Count strong/slip for subtitle
-    let strongCount = 0, slipCount = 0;
-    for (let d = 1; d <= daysInMonth; d++) {
-        const key = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-        if (logStatus(log[key]) === 'strong') strongCount++;
-        if (logStatus(log[key]) === 'slip') slipCount++;
-    }
-    subtitle.textContent = strongCount > 0 || slipCount > 0
-        ? `${strongCount} strong · ${slipCount} slip${slipCount !== 1 ? 's' : ''}`
-        : '';
+    // Disable next arrow if on current month
+    const nextBtn = document.getElementById('monthNavNext');
+    if (nextBtn) nextBtn.disabled = monthOffset >= 0;
 
-    // Day labels row: S M T W T F S
-    const DAY_LABELS = ['S','M','T','W','T','F','S'];
-    let html = DAY_LABELS.map(d =>
-        `<div class="month-day-label">${d}</div>`
-    ).join('');
-
-    // Empty cells before first day
-    for (let i = 0; i < firstDayOfWeek; i++) {
-        html += `<div class="month-cell future"></div>`;
+    // Disable prev arrow if at journey start month
+    const prevBtn = document.querySelector('.month-nav-btn:first-child');
+    if (prevBtn) {
+        const dates = Object.values(log)
+            .map(e => (typeof e === 'object') ? e.date : null)
+            .filter(Boolean).sort();
+        if (dates.length > 0) {
+            const earliest  = new Date(dates[0]);
+            const minOffset = (earliest.getFullYear() - today.getFullYear()) * 12
+                            + (earliest.getMonth() - today.getMonth());
+            prevBtn.disabled = monthOffset <= minOffset;
+        } else {
+            prevBtn.disabled = monthOffset <= 0;
+        }
     }
 
-    // Build date→status lookup from new log format (key: 'day-N', value: {status, date})
+    // Build date→status lookup
     const dateStatus = {};
     Object.values(log).forEach(entry => {
         const dateKey = (typeof entry === 'object') ? entry.date : null;
@@ -3038,22 +3083,31 @@ function renderMonthGrid() {
         if (dateKey && status) dateStatus[dateKey] = status;
     });
 
-    // Recount subtitle using dateStatus
-    let strongCount2 = 0, slipCount2 = 0;
+    // Count for subtitle
+    let strongCount = 0, slipCount = 0;
     for (let d = 1; d <= daysInMonth; d++) {
         const key = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-        if (dateStatus[key] === 'strong') strongCount2++;
-        if (dateStatus[key] === 'slip')   slipCount2++;
+        if (dateStatus[key] === 'strong') strongCount++;
+        if (dateStatus[key] === 'slip')   slipCount++;
     }
-    subtitle.textContent = strongCount2 > 0 || slipCount2 > 0
-        ? `${strongCount2} strong · ${slipCount2} slip${slipCount2 !== 1 ? 's' : ''}`
+    subtitle.textContent = strongCount > 0 || slipCount > 0
+        ? `${strongCount} strong · ${slipCount} slip${slipCount !== 1 ? 's' : ''}`
         : 'Your history starts today';
+
+    // Day labels
+    const DAY_LABELS = ['S','M','T','W','T','F','S'];
+    let html = DAY_LABELS.map(d => `<div class="month-day-label">${d}</div>`).join('');
+
+    // Empty cells before first day
+    for (let i = 0; i < firstDayOfWeek; i++) {
+        html += `<div class="month-cell future"></div>`;
+    }
 
     // Day cells
     for (let d = 1; d <= daysInMonth; d++) {
         const key      = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-        const isToday  = d === today.getDate();
-        const isFuture = d > today.getDate();
+        const isToday  = isCurrentMonth && d === today.getDate();
+        const isFuture = isCurrentMonth && d > today.getDate();
         const status   = dateStatus[key];
 
         let cls = 'month-cell';
@@ -3133,7 +3187,12 @@ function checkNewDay() {
 
 function logYesterday(result) {
     document.getElementById('reminderOverlay').classList.remove('active');
-    const yesterdayCalDay = state.calendarDay; // current calendarDay is yesterday before we advance
+    const yesterdayCalDay = state.calendarDay;
+
+    // Get yesterday's real date
+    const yDate = new Date();
+    yDate.setDate(yDate.getDate() - 1);
+    const yKey = `${yDate.getFullYear()}-${String(yDate.getMonth()+1).padStart(2,'0')}-${String(yDate.getDate()).padStart(2,'0')}`;
 
     if (result === 'strong') {
         state.score.success++;
@@ -3141,13 +3200,13 @@ function logYesterday(result) {
         if (state.currentStreak > state.longestStreak) state.longestStreak = state.currentStreak;
         checkJourneyMilestone(state.score.success);
         updateBestJourney();
-        state.dailyLog[`day-${yesterdayCalDay}`] = { status: 'strong', day: yesterdayCalDay, date: todayKey() };
+        state.dailyLog[`day-${yesterdayCalDay}`] = { status: 'strong', day: yesterdayCalDay, date: yKey };
     } else {
         state.currentJourneyStreaks.push(state.currentStreak);
         state.score.failures++;
         state.currentStreak    = 0;
         state.recordCelebrated = false;
-        state.dailyLog[`day-${yesterdayCalDay}`] = { status: 'slip', day: yesterdayCalDay, date: todayKey() };
+        state.dailyLog[`day-${yesterdayCalDay}`] = { status: 'slip', day: yesterdayCalDay, date: yKey };
     }
 
     if (state.score.failures >= 10) { endJourney(); return; }
