@@ -27,7 +27,6 @@
             --bg:          #f5f5f7;
         }
 
-
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             background: var(--bg);
@@ -1596,7 +1595,24 @@
     </div>
 </div>
 
-
+<!-- ── Multi-day gap review overlay ── -->
+<div class="overlay" id="gapReviewOverlay">
+    <div class="overlay-card" onclick="event.stopPropagation()" style="text-align:center;">
+        <div style="font-size:48px;margin-bottom:12px;">📅</div>
+        <div id="gapReviewTitle" style="font-size:20px;font-weight:700;color:var(--text);margin-bottom:8px;letter-spacing:-0.3px;">You've been away</div>
+        <div id="gapReviewMessage" style="font-size:14px;color:var(--text-muted);line-height:1.5;margin-bottom:24px;"></div>
+        <div id="gapReviewChoices" style="display:flex;flex-direction:column;gap:12px;">
+            <button onclick="confirmGapAllStrong()" style="padding:13px;background:linear-gradient(180deg,var(--green-light),var(--green));color:white;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;">✓ All days were strong</button>
+            <button onclick="startGapDayByDay()" style="padding:13px;background:var(--surface-2);color:var(--text);border:1.5px solid var(--border);border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;">Log day by day</button>
+        </div>
+        <div id="gapReviewDayLog" style="display:none;">
+            <div style="display:flex;gap:12px;">
+                <button onclick="logGapDay('strong')" style="flex:1;padding:13px;background:linear-gradient(180deg,var(--green-light),var(--green));color:white;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;">✓ Strong</button>
+                <button onclick="logGapDay('slip')" style="flex:1;padding:13px;background:linear-gradient(180deg,#ff453a,#ff3b30);color:white;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;">✕ Slip</button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <!-- ── Toast notification ── -->
 <div id="toast"></div>
@@ -1683,19 +1699,7 @@ if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').catch(() => {});
 }
 
-
-// ════════════════════════════════════════════════════════
-//  FIREBASE CONFIG (ready for V2 integration)
-// ════════════════════════════════════════════════════════
-const firebaseConfig = {
-    apiKey:            "AIzaSyBXUAxK35kmMEP9DAhnHlPeSoeTf6UznZU",
-    authDomain:        "king-mvp-7aa81.firebaseapp.com",
-    projectId:         "king-mvp-7aa81",
-    storageBucket:     "king-mvp-7aa81.firebasestorage.app",
-    messagingSenderId: "950917699218",
-    appId:             "1:950917699218:web:e1a1d95f0400384558784b"
-};
-
+// Firebase integration planned for V2 — config loaded from env/server, not client source.
 
 // ════════════════════════════════════════════════════════
 //  STORAGE LAYER
@@ -1737,6 +1741,54 @@ function safeRemove(key) {
     catch (e) { delete _memStorage[key]; }
 }
 
+// ── Local-date helpers (avoid UTC parse bugs in YYYY-MM-DD strings) ──
+
+function parseDateKey(key) {
+    const [y, m, d] = key.split('-').map(Number);
+    return new Date(y, m - 1, d);
+}
+
+function dateKeyFromDate(d) {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function daysBetweenKeys(fromKey, toKey) {
+    const ms = parseDateKey(toKey) - parseDateKey(fromKey);
+    return Math.round(ms / (1000 * 60 * 60 * 24));
+}
+
+function addDaysToKey(key, n) {
+    const d = parseDateKey(key);
+    d.setDate(d.getDate() + n);
+    return dateKeyFromDate(d);
+}
+
+function dayOfYearFromKey(key) {
+    const d = parseDateKey(key);
+    const start = new Date(d.getFullYear(), 0, 0);
+    return Math.floor((d - start) / (1000 * 60 * 60 * 24));
+}
+
+/** Deep-merge saved localStorage data with defaults for nested objects. */
+function mergeSavedState(saved) {
+    const defaults = getDefaultState();
+    const merged = { ...defaults, ...saved };
+
+    merged.score = { ...defaults.score, ...(saved.score || saved.currentScore || {}) };
+    merged.bestJourney = {
+        ...defaults.bestJourney,
+        ...(typeof saved.bestJourney === 'object' ? saved.bestJourney : {}),
+        ...(typeof saved.highestScore === 'object' ? saved.highestScore : {}),
+    };
+    merged.journeyMilestones = { ...defaults.journeyMilestones, ...(saved.journeyMilestones || {}) };
+    merged.completedJourneys = saved.completedJourneys || saved.attemptHistory || defaults.completedJourneys;
+    merged.pastJourneyStreaks = saved.pastJourneyStreaks || saved.streakHistory || defaults.pastJourneyStreaks;
+    merged.currentJourneyStreaks = saved.currentJourneyStreaks || saved.currentAttemptStreaks || defaults.currentJourneyStreaks;
+    merged.dailyLog = saved.dailyLog || defaults.dailyLog;
+    merged.urgeLog = saved.urgeLog || defaults.urgeLog;
+
+    return merged;
+}
 
 // ════════════════════════════════════════════════════════
 //  DEFAULT STATE
@@ -1803,7 +1855,6 @@ function getDefaultState() {
     };
 }
 
-
 // ════════════════════════════════════════════════════════
 //  APP STATE
 // ════════════════════════════════════════════════════════
@@ -1814,6 +1865,8 @@ let currentTab    = 0;    // 0 = Streak, 1 = Journey Milestones
 let chartPage     = -1;   // -1 means "snap to latest on next draw"
 let chartMode     = 'streaks'; // 'streaks' | 'journeys'
 let monthOffset   = 0;    // 0 = current month, -1 = last month etc.
+let gapDayQueue   = [];   // dates waiting for day-by-day gap logging
+let gapDayIndex   = 0;
 
 function switchChartMode(mode) {
     chartMode = mode;
@@ -1824,7 +1877,6 @@ function switchChartMode(mode) {
     renderChart();
 }
 
-
 // ════════════════════════════════════════════════════════
 //  INIT
 // ════════════════════════════════════════════════════════
@@ -1832,29 +1884,10 @@ function switchChartMode(mode) {
 function init() {
     const saved = loadFromStorage();
     if (saved) {
-        state = { ...getDefaultState(), ...saved };
-
-        // Back-compat: old key names → new names
-        if (saved.currentScore !== undefined && saved.score === undefined) {
-            state.score = saved.currentScore;
-        }
-        if (saved.highestScore !== undefined && state.bestJourney.success === 0) {
-            state.bestJourney = saved.highestScore;
-        }
-        if (saved.attemptHistory !== undefined && state.completedJourneys.length === 0) {
-            state.completedJourneys = saved.attemptHistory;
-        }
-        if (saved.streakHistory !== undefined && state.pastJourneyStreaks.length === 0) {
-            state.pastJourneyStreaks = saved.streakHistory;
-        }
-        if (saved.currentAttemptStreaks !== undefined) {
-            state.currentJourneyStreaks = saved.currentAttemptStreaks;
-        }
-        state.journeyMilestones = { ...getDefaultState().journeyMilestones, ...(saved.journeyMilestones || {}) };
+        state = mergeSavedState(saved);
     }
     renderAll();
 }
-
 
 // ════════════════════════════════════════════════════════
 //  USER ACTIONS
@@ -1930,18 +1963,25 @@ function resetAll() {
     renderAll();
 }
 
-
-
 function recordSuccess() {
-    state.score.success++;
-    state.currentStreak++;
     state.todayStatus = 'success';
     state.lastOpenedDate = todayKey();
-    state.dailyLog = state.dailyLog || {};
-    state.dailyLog[`day-${state.calendarDay}`] = { status: 'strong', day: state.calendarDay, date: todayKey() };
+    applyStrongDay({ logDate: todayKey(), suppressUI: false });
+    chartPage = -1;
+    saveAndRender();
+    showToast(state.currentStreak);
+}
 
-    // Fire personal best popup only once per streak attempt
-    // recordCelebrated resets to false when streak resets
+/** Shared success logic for manual logging, yesterday catch-up, and gap review. */
+function applyStrongDay({ logDate, suppressUI = false } = {}) {
+    const dateKey = logDate || todayKey();
+    const calDay  = state.calendarDay;
+
+    state.score.success++;
+    state.currentStreak++;
+    state.dailyLog = state.dailyLog || {};
+    state.dailyLog[`day-${calDay}`] = { status: 'strong', day: calDay, date: dateKey };
+
     const prevLongest = state.longestStreak;
     const isNewRecord = state.currentStreak > prevLongest
         && prevLongest > 0
@@ -1952,7 +1992,7 @@ function recordSuccess() {
         state.longestStreak = state.currentStreak;
     }
 
-    if (isNewRecord) {
+    if (!suppressUI && isNewRecord) {
         state.recordCelebrated = true;
         setTimeout(() => showCelebration({
             emoji:   '🏆',
@@ -1962,22 +2002,41 @@ function recordSuccess() {
         }), 400);
     }
 
-    // Check fixed-day streak milestones (1, 3, 7, 10, 14, 21, 30, 50, 100)
-    triggerStreakMilestone(state.currentStreak);
+    if (!suppressUI) triggerStreakMilestone(state.currentStreak);
 
-    // Track 50-day and 100-day counts
     if (state.currentStreak === 50)  state.day50Count++;
     if (state.currentStreak === 100) state.day100Count++;
 
-    // Check journey strong-day milestones (75, 100, 150...)
-    checkJourneyMilestone(state.score.success);
-
-    // Update best journey record
+    checkJourneyMilestone(state.score.success, suppressUI);
     updateBestJourney();
 
-    chartPage = -1;
-    saveAndRender();
-    showToast(state.currentStreak);
+    if (dateKey === todayKey()) {
+        state.todayStatus = 'success';
+    }
+}
+
+/** Advance one journey calendar day after logging a past day. */
+function advanceCalendarDay() {
+    state.calendarDay++;
+    state.todayStatus    = 'none';
+    state.todayFailCount = 0;
+}
+
+/** Apply a slip for a specific calendar day (gap / yesterday catch-up). */
+function applySlipDay({ logDate, calDay }) {
+    const streakToRecord = state.todayStatus === 'none' ? state.currentStreak : 0;
+    state.currentJourneyStreaks.push(streakToRecord);
+    state.score.failures++;
+    state.currentStreak    = 0;
+    state.recordCelebrated = false;
+    state.dailyLog = state.dailyLog || {};
+    state.dailyLog[`day-${calDay}`] = { status: 'slip', day: calDay, date: logDate };
+    state.todayFailCount++;
+    updateBestJourney();
+
+    if (logDate === todayKey()) {
+        state.todayStatus = 'failed';
+    }
 }
 
 function recordFailure() {
@@ -1995,7 +2054,6 @@ function recordFailure() {
     state.todayFailCount++;
 
     updateBestJourney();
-
 
     // Journey ends when all 10 failures are used
     if (state.score.failures >= 10) {
@@ -2031,6 +2089,7 @@ function endJourney() {
     // Capture current journey data for comparison popup before resetting
     const finishedAttempt = state.attempt;
     const finishedScore   = { ...state.score };
+    const finishedStreaks = [...state.currentJourneyStreaks];
     const prevJourney     = state.completedJourneys.length >= 2
         ? state.completedJourneys[state.completedJourneys.length - 2]
         : null;
@@ -2055,7 +2114,11 @@ function endJourney() {
     // Show comparison popup after a short delay (purely UI — state already saved)
     setTimeout(() => {
         showJourneyComparison(
-            { attempt: finishedAttempt, score: finishedScore },
+            {
+                attempt: finishedAttempt,
+                score: finishedScore,
+                bestStreak: Math.max(...finishedStreaks, 0),
+            },
             prevJourney
         );
     }, 600);
@@ -2078,16 +2141,15 @@ function updateBestJourney() {
     }
 }
 
-function checkJourneyMilestone(successCount) {
+function checkJourneyMilestone(successCount, suppressUI = false) {
     const milestones = [30, 50, 75, 100, 150, 200, 300, 400, 500, 750, 1000];
     if (milestones.includes(successCount)) {
         if (successCount >= 75) {
             state.journeyMilestones[successCount] = (state.journeyMilestones[successCount] || 0) + 1;
         }
-        triggerJourneyMilestone(successCount);
+        if (!suppressUI) triggerJourneyMilestone(successCount);
     }
 }
-
 
 // ════════════════════════════════════════════════════════
 //  RENDER — all DOM updates go through here
@@ -2257,9 +2319,9 @@ function renderJourneyMilestones() {
     const endEl = document.getElementById('enduranceSection');
     if (endEl) {
         endEl.innerHTML = '';
-        ENDURANCE.forEach(m => {
+        let teaserShown = false;
+        for (const m of ENDURANCE) {
             if (s >= m.unlockAt) {
-                // Revealed — show milestone card
                 const reached = s >= m.day;
                 const count   = state.journeyMilestones[m.day] || 0;
                 const cls     = reached ? 'milestone-item achieved-glow' : 'milestone-item';
@@ -2272,16 +2334,15 @@ function renderJourneyMilestones() {
                         </div>
                         <div class="milestone-status">${status}</div>
                     </div>`;
-            } else {
-                // Not yet unlocked — show next-unlock teaser once
+            } else if (!teaserShown) {
                 endEl.innerHTML += `
                     <div class="next-unlock">
                         <span class="next-unlock-icon">🔒</span>
                         Keep going to unlock
                     </div>`;
-                return false; // stop showing further
+                teaserShown = true;
             }
-        });
+        }
     }
 
     // ── Legendary — full mystery until 400 days ────────
@@ -2298,7 +2359,8 @@ function renderJourneyMilestones() {
             // Full mystery — just a lock, nothing else
             legEl.innerHTML = `<div class="mystery-lock"><span class="mystery-lock-icon">🔒</span></div>`;
         } else {
-            LEGENDARY.forEach(m => {
+            let teaserShown = false;
+            for (const m of LEGENDARY) {
                 if (s >= m.unlockAt) {
                     const reached = s >= m.day;
                     const count   = state.journeyMilestones[m.day] || 0;
@@ -2312,15 +2374,15 @@ function renderJourneyMilestones() {
                             </div>
                             <div class="milestone-status">${status}</div>
                         </div>`;
-                } else {
+                } else if (!teaserShown) {
                     legEl.innerHTML += `
                         <div class="next-unlock">
                             <span class="next-unlock-icon">🔒</span>
                             Keep going to unlock
                         </div>`;
-                    return false;
+                    teaserShown = true;
                 }
-            });
+            }
         }
     }
 }
@@ -2336,7 +2398,6 @@ function switchTab(index) {
     // Re-render science tab when switched to so it's always fresh
     if (index === 2) renderBrainCard();
 }
-
 
 // ════════════════════════════════════════════════════════
 //  STREAK CHART
@@ -2451,7 +2512,6 @@ function renderChart() {
 
     // Arrows
 
-
     // ── Layout ───────────────────────────────────────
     // Y scale — fixed to all-time best with 25% headroom
     const allTimeMax = Math.max(...points.map(p => p.val), 1);
@@ -2559,7 +2619,6 @@ function renderChart() {
         ${arrowsSVG}`;
 }
 
-
 // ════════════════════════════════════════════════════════
 //  TOAST  — brief motivational message after a success
 // ════════════════════════════════════════════════════════
@@ -2601,7 +2660,6 @@ function showToast(streak, customMsg) {
     toast.classList.add('show');
     toastTimer = setTimeout(() => toast.classList.remove('show'), 3200);
 }
-
 
 // ════════════════════════════════════════════════════════
 //  CELEBRATIONS  — popup + confetti
@@ -2703,7 +2761,6 @@ function closeCelebration() {
     }
 }
 
-
 // ════════════════════════════════════════════════════════
 //  CONFETTI
 // ════════════════════════════════════════════════════════
@@ -2776,7 +2833,6 @@ function stopConfetti() {
     canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
 }
 
-
 // ════════════════════════════════════════════════════════
 //  FEATURE 1: URGE SURFING TIMER
 //  A 15-minute countdown with a breathing cycle animation.
@@ -2785,8 +2841,8 @@ function stopConfetti() {
 
 const URGE_DURATION_SECS = 15 * 60; // 15 minutes
 let urgeSecsLeft  = URGE_DURATION_SECS;
-let urgeInterval  = null;
-let breathInterval = null;
+let urgeInterval   = null;
+let breathTimeout  = null;
 
 let urgePendingTimer = null;
 
@@ -2819,7 +2875,8 @@ function startUrgeSurf() {
 function launchUrgeTimer() {
     // Clear any existing intervals before starting fresh
     clearInterval(urgeInterval);
-    clearInterval(breathInterval);
+    clearTimeout(breathTimeout);
+    breathTimeout = null;
 
     urgeSecsLeft = URGE_DURATION_SECS;
     updateUrgeCountdown();
@@ -2844,7 +2901,6 @@ function updateUrgeCountdown() {
 }
 
 function startBreathing() {
-    // 4-second inhale, 4-second hold, 4-second exhale cycle
     const ring    = document.getElementById('breathRing');
     const label   = document.getElementById('breathLabel');
     const phase   = document.getElementById('urgePhase');
@@ -2859,6 +2915,8 @@ function startBreathing() {
 
     let phaseIndex = 0;
 
+    clearTimeout(breathTimeout);
+
     function runPhase() {
         const p = PHASES[phaseIndex];
         label.textContent = p.label;
@@ -2866,11 +2924,10 @@ function startBreathing() {
         ring.style.transition = `stroke-dashoffset ${p.duration}s ease-in-out`;
         ring.style.strokeDashoffset = p.offset;
         phaseIndex = (phaseIndex + 1) % PHASES.length;
+        breathTimeout = setTimeout(runPhase, p.duration * 1000);
     }
 
     runPhase();
-    // Sum of all phase durations = 14s cycle
-    breathInterval = setInterval(runPhase, 3500);
 }
 
 function urgeSurvived() {
@@ -2882,10 +2939,10 @@ function urgeSurvived() {
 
 function closeUrge() {
     clearInterval(urgeInterval);
-    clearInterval(breathInterval);
+    clearTimeout(breathTimeout);
+    breathTimeout = null;
     document.getElementById('urgeOverlay').classList.remove('active');
 }
-
 
 // ════════════════════════════════════════════════════════
 //  FEATURE 3: JOURNEY COMPARISON CARD
@@ -2910,8 +2967,7 @@ function showJourneyComparison(current, prev) {
 
     document.getElementById('compareNextNum').textContent = current.attempt + 1;
 
-    // Build comparison stats
-    const currentBestStreak = Math.max(...(state.currentJourneyStreaks || []), 0);
+    const currentBestStreak = current.bestStreak ?? 0;
     const prevBestStreak    = prev
         ? Math.max(...((state.pastJourneyStreaks.find(h => h.attempt === prev.attempt)?.streaks) || []), 0)
         : null;
@@ -2979,7 +3035,6 @@ function closeCompare() {
     document.getElementById('journeyCompareOverlay').classList.remove('active');
 }
 
-
 // ════════════════════════════════════════════════════════
 //  MONTHLY GRID
 // ════════════════════════════════════════════════════════
@@ -2996,7 +3051,6 @@ function logStatus(entry) {
     return entry.status || null;
 }
 
-
 function monthNav(dir) {
     monthOffset += dir;
     if (monthOffset > 0) monthOffset = 0;
@@ -3010,7 +3064,7 @@ function monthNav(dir) {
         .sort();
 
     if (dates.length > 0) {
-        const earliest   = new Date(dates[0]);
+        const earliest   = parseDateKey(dates[0]);
         const today      = new Date();
         const minOffset  = (earliest.getFullYear() - today.getFullYear()) * 12
                          + (earliest.getMonth() - today.getMonth());
@@ -3052,7 +3106,7 @@ function renderMonthGrid() {
             .map(e => (typeof e === 'object') ? e.date : null)
             .filter(Boolean).sort();
         if (dates.length > 0) {
-            const earliest  = new Date(dates[0]);
+            const earliest  = parseDateKey(dates[0]);
             const minOffset = (earliest.getFullYear() - today.getFullYear()) * 12
                             + (earliest.getMonth() - today.getMonth());
             prevBtn.disabled = monthOffset <= minOffset;
@@ -3108,98 +3162,153 @@ function renderMonthGrid() {
     grid.innerHTML = html;
 }
 
-
 // ════════════════════════════════════════════════════════
 //  DAY REFRESH
 //  On every app open, check if a new real-world day has
-//  passed. If so, auto-advance days (unlogged = success).
+//  passed and prompt for any missed logging.
 // ════════════════════════════════════════════════════════
 
 function checkNewDay() {
     const today = todayKey();
 
-    // Already checked today — skip (prevents multiple event listeners firing)
     if (state.lastCheckedDate === today) return;
-    state.lastCheckedDate = today;
 
-    // First open ever — just record today
     if (!state.lastOpenedDate) {
         state.lastOpenedDate = today;
+        state.lastCheckedDate = today;
         saveToStorage(state);
         return;
     }
 
-    // Same day — nothing to do
-    if (state.lastOpenedDate === today) return;
+    if (state.lastOpenedDate === today) {
+        state.lastCheckedDate = today;
+        saveToStorage(state);
+        return;
+    }
 
-    const last     = new Date(state.lastOpenedDate);
-    const now      = new Date(today);
-    const diffDays = Math.round((now - last) / (1000 * 60 * 60 * 24));
+    const diffDays = daysBetweenKeys(state.lastOpenedDate, today);
 
-    // Exactly 1 day missed and yesterday was unlogged — show reminder
+    // One day missed — ask about yesterday only
     if (diffDays === 1 && state.todayStatus === 'none') {
-        document.getElementById('reminderOverlay').classList.add('active');
-        return; // wait for user to respond before advancing
-    }
-
-    // Multiple days missed — auto-advance silently (each counts as success)
-    for (let i = 0; i < diffDays; i++) {
-        if (state.todayStatus === 'none') {
-            state.score.success++;
-            state.currentStreak++;
-            if (state.currentStreak > state.longestStreak) {
-                state.longestStreak = state.currentStreak;
-            }
-            // Log as strong in dailyLog so monthly grid turns green
-            const missedDate = new Date(last);
-            missedDate.setDate(missedDate.getDate() + i);
-            const missedKey = `${missedDate.getFullYear()}-${String(missedDate.getMonth()+1).padStart(2,'0')}-${String(missedDate.getDate()).padStart(2,'0')}`;
-            state.dailyLog[`day-${state.calendarDay}`] = { status: 'strong', day: state.calendarDay, date: missedKey };
-            checkJourneyMilestone(state.score.success);
-            updateBestJourney();
+        const reminder = document.getElementById('reminderOverlay');
+        if (!reminder.classList.contains('active')) {
+            reminder.classList.add('active');
         }
-        if (state.score.failures >= 10) { endJourney(); break; }
-        state.calendarDay++;
-        state.todayStatus    = 'none';
-        state.todayFailCount = 0;
+        return;
     }
 
+    // Multiple days missed — prompt instead of silent auto-fill
+    if (diffDays > 1 && state.todayStatus === 'none') {
+        const gap = document.getElementById('gapReviewOverlay');
+        if (!gap.classList.contains('active')) {
+            showGapReviewPrompt(diffDays);
+        }
+        return;
+    }
+
+    // Already logged today/yesterday status — just advance calendar for elapsed days
+    for (let i = 0; i < diffDays; i++) {
+        advanceCalendarDay();
+    }
     state.lastOpenedDate = today;
+    state.lastCheckedDate = today;
     chartPage = -1;
     saveToStorage(state);
     renderAll();
 }
 
+function buildGapDayQueue() {
+    const diffDays = daysBetweenKeys(state.lastOpenedDate, todayKey());
+    const queue = [];
+    for (let i = 1; i <= diffDays; i++) {
+        queue.push(addDaysToKey(state.lastOpenedDate, i));
+    }
+    return queue;
+}
+
+function showGapReviewPrompt(diffDays) {
+    document.getElementById('gapReviewTitle').textContent = "You've been away";
+    document.getElementById('gapReviewMessage').textContent =
+        `You haven't logged for ${diffDays} day${diffDays !== 1 ? 's' : ''}. How did those days go?`;
+    document.getElementById('gapReviewChoices').style.display = 'flex';
+    document.getElementById('gapReviewDayLog').style.display = 'none';
+    document.getElementById('gapReviewOverlay').classList.add('active');
+}
+
+function confirmGapAllStrong() {
+    document.getElementById('gapReviewOverlay').classList.remove('active');
+    const queue = buildGapDayQueue();
+    for (let idx = 0; idx < queue.length; idx++) {
+        applyStrongDay({ logDate: queue[idx], suppressUI: idx < queue.length - 1 });
+        if (state.score.failures >= 10) { endJourney(); return; }
+        advanceCalendarDay();
+    }
+    finishGapCatchUp();
+}
+
+function startGapDayByDay() {
+    document.getElementById('gapReviewChoices').style.display = 'none';
+    document.getElementById('gapReviewDayLog').style.display = 'block';
+    gapDayQueue = buildGapDayQueue();
+    gapDayIndex = 0;
+    showNextGapDayPrompt();
+}
+
+function showNextGapDayPrompt() {
+    if (gapDayIndex >= gapDayQueue.length) {
+        document.getElementById('gapReviewOverlay').classList.remove('active');
+        finishGapCatchUp();
+        return;
+    }
+    const dateKey = gapDayQueue[gapDayIndex];
+    const label   = parseDateKey(dateKey).toLocaleDateString(undefined, {
+        weekday: 'short', month: 'short', day: 'numeric',
+    });
+    document.getElementById('gapReviewTitle').textContent = 'Did you stay strong?';
+    document.getElementById('gapReviewMessage').textContent =
+        `Day ${gapDayIndex + 1} of ${gapDayQueue.length} (${label})`;
+}
+
+function logGapDay(result) {
+    const dateKey = gapDayQueue[gapDayIndex];
+    if (result === 'strong') {
+        applyStrongDay({ logDate: dateKey, suppressUI: gapDayIndex < gapDayQueue.length - 1 });
+    } else {
+        applySlipDay({ logDate: dateKey, calDay: state.calendarDay });
+    }
+    if (state.score.failures >= 10) {
+        document.getElementById('gapReviewOverlay').classList.remove('active');
+        endJourney();
+        return;
+    }
+    advanceCalendarDay();
+    gapDayIndex++;
+    showNextGapDayPrompt();
+}
+
+function finishGapCatchUp() {
+    state.lastOpenedDate = todayKey();
+    state.lastCheckedDate = todayKey();
+    chartPage = -1;
+    saveToStorage(state);
+    renderAll();
+    showToast(state.currentStreak, 'Catch-up complete. Keep going!');
+}
 
 function logYesterday(result) {
     document.getElementById('reminderOverlay').classList.remove('active');
-    const yesterdayCalDay = state.calendarDay;
-
-    // Get yesterday's real date
-    const yDate = new Date();
-    yDate.setDate(yDate.getDate() - 1);
-    const yKey = `${yDate.getFullYear()}-${String(yDate.getMonth()+1).padStart(2,'0')}-${String(yDate.getDate()).padStart(2,'0')}`;
+    const yKey = addDaysToKey(todayKey(), -1);
 
     if (result === 'strong') {
-        state.score.success++;
-        state.currentStreak++;
-        if (state.currentStreak > state.longestStreak) state.longestStreak = state.currentStreak;
-        checkJourneyMilestone(state.score.success);
-        updateBestJourney();
-        state.dailyLog[`day-${yesterdayCalDay}`] = { status: 'strong', day: yesterdayCalDay, date: yKey };
+        applyStrongDay({ logDate: yKey, suppressUI: false });
     } else {
-        state.currentJourneyStreaks.push(state.currentStreak);
-        state.score.failures++;
-        state.currentStreak    = 0;
-        state.recordCelebrated = false;
-        state.dailyLog[`day-${yesterdayCalDay}`] = { status: 'slip', day: yesterdayCalDay, date: yKey };
+        applySlipDay({ logDate: yKey, calDay: state.calendarDay });
     }
 
     if (state.score.failures >= 10) { endJourney(); return; }
-    state.calendarDay++;
-    state.todayStatus    = 'none';
-    state.todayFailCount = 0;
+    advanceCalendarDay();
     state.lastOpenedDate = todayKey();
+    state.lastCheckedDate = todayKey();
     chartPage = -1;
     saveToStorage(state);
     renderAll();
@@ -3333,7 +3442,6 @@ function toggleSciencePhase(idx) {
     chevron.style.transition = 'transform 0.2s';
 }
 
-
 // ════════════════════════════════════════════════════════
 //  DAILY KNOWLEDGE CARD
 //  One fact per day, rotates from a pool of 20.
@@ -3381,16 +3489,12 @@ function renderLifetimeStats() {
 }
 
 function renderKnowledgeCard() {
-    // Rotate by calendarDay — changes every day user advances, works with test button
-    const fact = KNOWLEDGE_FACTS[(state.calendarDay - 1) % KNOWLEDGE_FACTS.length];
+    const fact = KNOWLEDGE_FACTS[dayOfYearFromKey(todayKey()) % KNOWLEDGE_FACTS.length];
 
     document.getElementById('knowledgeEmoji').textContent    = fact.emoji;
     document.getElementById('knowledgeHeadline').textContent = fact.headline;
     document.getElementById('knowledgeBody').textContent     = fact.body;
 }
-
-
-
 
 //  ONBOARDING
 //  Shows 3 slides on first launch only.
@@ -3433,7 +3537,6 @@ function completeOnboarding() {
     overlay.classList.add('hidden');
     setTimeout(() => overlay.style.display = 'none', 400);
 }
-
 
 // ════════════════════════════════════════════════════════
 //  START
